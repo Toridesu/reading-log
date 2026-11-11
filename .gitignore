@@ -1,0 +1,11 @@
+/.tools/
+/.cache/
+/bin/
+.env
+.env.*
+!.env.example
+*.tfstate
+*.tfstate.*
+.terraform/
+*.tfplan
+coverage.out
