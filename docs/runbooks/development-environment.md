@@ -8,7 +8,7 @@
 
 | 対象 | 確認結果 | 今後の扱い |
 | --- | --- | --- |
-| Git | 2.53.0。mainブランチで初期化・初回コミット済み | origin設定済み。初回pushは承認待ち |
+| Git | 2.53.0。mainブランチで初期化・初回コミット済み | mainをorigin/mainへpush済み。作業単位でコミット・pushする |
 | Docker CLI / Engine | 29.9.2。サーバーバージョンの取得成功 | そのまま使用。イメージ取得・ビルド・コンテナ起動は別途確認 |
 | Docker Compose | v5.6.1 | そのまま使用 |
 | Go | `.tools/go` に1.27.4を配置済み | `bash scripts/go.sh` で使用 |
@@ -22,7 +22,7 @@ Dockerの最初の確認は実行サンドボックス内のソケット権限�
 
 開発コマンドはこのWSL環境から実行する。Windows版とWSL版のツールを混ぜず、必要な段階で追加する。SDKやCLI本体はGitへ入れず、バージョン指定と設定・コードを管理する。
 
-Gitは個人開発に合わせ、まずmainブランチで作業単位のコミットを残す。大きな変更は必要に応じて短いブランチを使う。初期から複雑なブランチ運用やレビュー必須ルールを設けない。利用者が作成した公開リポジトリ [Toridesu/reading-log](https://github.com/Toridesu/reading-log) をoriginに設定済み。初回pushは公開送信の承認待ち。
+Gitは個人開発に合わせ、まずmainブランチで作業単位のコミットを残す。大きな変更は必要に応じて短いブランチを使う。初期から複雑なブランチ運用やレビュー必須ルールを設けない。利用者が作成した公開リポジトリ [Toridesu/reading-log](https://github.com/Toridesu/reading-log) をoriginに設定済み。利用者の承認を受けて初回pushを完了し、mainはorigin/mainを追跡している。
 
 ### アプリ開発
 
