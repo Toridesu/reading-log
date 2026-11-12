@@ -1,3 +1,4 @@
+# ローカル開発用のPostgreSQLを起動する設定。docker compose up で読み込まれる。
 name: reading-log
 
 services:
@@ -8,11 +9,14 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run scripts/setup-local.sh first}
       APP_DB_PASSWORD: ${APP_DB_PASSWORD:?Run scripts/setup-local.sh first}
+    # 自分のPCからだけDBへ接続できるよう、公開先を127.0.0.1に限定する。
     ports:
       - "127.0.0.1:${DB_PORT:-5432}:5432"
+    # データをコンテナの外へ保存し、コンテナを作り直しても引き継ぐ。
     volumes:
       - postgres_data:/var/lib/postgresql
       - ./docker/postgres/init-app.sh:/docker-entrypoint-initdb.d/init-app.sh:ro
+    # DBが接続を受け付ける状態か確認する。--wait はこの成功を待つ。
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d readinglog"]
       interval: 3s

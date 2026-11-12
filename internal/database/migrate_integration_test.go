@@ -1,3 +1,5 @@
+// 実際のPostgreSQLで、テーブル作成・再適用・保存する値のルールを検証する。
+// TEST_DATABASE_URLがあるときだけ実行し、専用DBの一時領域を使う。
 package database
 
 import (
@@ -77,6 +79,7 @@ func TestMigrationsIntegration(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// 不正な値の保存が拒否されたか、PostgreSQLのエラー番号（SQLSTATE）で確認する。
 	for _, tc := range []struct {
 		name, query, code string
 		args              []any

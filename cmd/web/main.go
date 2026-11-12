@@ -1,3 +1,4 @@
+// Webアプリの入口。DBにつなぎ、HTTPサーバーを起動・停止する。
 package main
 
 import (
@@ -31,6 +32,7 @@ func run(logger *slog.Logger) error {
 		addr = "127.0.0.1:8080"
 	}
 
+	// 起動前にDBへの接続を確かめる。接続できなければ最大5秒で打ち切る。
 	connectCtx, cancelConnect := context.WithTimeout(context.Background(), 5*time.Second)
 	db, err := database.Open(connectCtx, os.Getenv("DATABASE_URL"))
 	cancelConnect()

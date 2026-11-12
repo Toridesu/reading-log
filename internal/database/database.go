@@ -1,3 +1,4 @@
+// PostgreSQLへの接続処理。Webアプリとマイグレーションの両方から使う。
 package database
 
 import (
@@ -10,7 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/stdlib"
 )
 
-// Open は接続プールを作り、実際に接続できることまで確認する。
+// Open はDB接続を使い回すための「接続プール」を作り、実際に接続できるかも確認する。
 func Open(ctx context.Context, connectionString string) (*sql.DB, error) {
 	if connectionString == "" {
 		return nil, errors.New("DATABASE_URL is required")
@@ -20,7 +21,9 @@ func Open(ctx context.Context, connectionString string) (*sql.DB, error) {
 		// パースエラーに接続URLやパスワードが含まれる場合があるので、そのまま返さない。
 		return nil, errors.New("DATABASE_URL is invalid")
 	}
+	// pgxをドライバー（GoとPostgreSQLをつなぐ部品）として、標準のdatabase/sqlから使う。
 	db := stdlib.OpenDB(*config)
+	// 小さなアプリなので同時接続は最大5本に抑える。
 	db.SetMaxOpenConns(5)
 	db.SetMaxIdleConns(5)
 	db.SetConnMaxLifetime(30 * time.Minute)

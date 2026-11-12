@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# .envのローカル設定を読み込み、go.shへ渡す。アプリ起動・マイグレーション・DBテストに使う。
 set -euo pipefail
 project_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$project_dir"

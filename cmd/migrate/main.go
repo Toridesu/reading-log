@@ -1,3 +1,4 @@
+// DBのテーブル変更を適用する専用コマンド。Webアプリとは別に実行する。
 package main
 
 import (
@@ -17,6 +18,7 @@ func main() {
 	}
 }
 
+// run は up（未適用のSQLを適用）か status（適用状況を表示）を実行する。
 func run() error {
 	if len(os.Args) != 2 || (os.Args[1] != "up" && os.Args[1] != "status") {
 		return errors.New("usage: migrate up|status")

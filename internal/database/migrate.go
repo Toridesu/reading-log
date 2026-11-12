@@ -1,3 +1,4 @@
+// gooseというライブラリに、SQLファイルとDB変更の管理方法を設定する。
 package database
 
 import (
@@ -9,8 +10,9 @@ import (
 	"readinglog/migrations"
 )
 
-// Migrator はSQLの適用履歴を管理する。ロックで同時実行を避ける。
+// Migrator は適用済みSQLを記録する仕組みを用意する。実際の適用は呼び出し元で行う。
 func Migrator(db *sql.DB) (*goose.Provider, error) {
+	// 2つのコマンドが同時にテーブルを変更しないよう、DBのロックを使う。
 	locker, err := lock.NewPostgresSessionLocker()
 	if err != nil {
 		return nil, err

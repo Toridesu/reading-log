@@ -45,7 +45,8 @@ func NewHandler(logger *slog.Logger, pingDB func(context.Context) error) (http.H
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		_, _ = w.Write(body.Bytes())
 	})
-	// 稼働確認とDBへの接続確認を分け、DB停止時もプロセスの状態を調べられる。
+	// /healthz はアプリの稼働確認、/readyz はDBへの接続確認。
+	// DBだけが止まった場合と、アプリ自体が止まった場合を切り分ける。
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Cache-Control", "no-store")
