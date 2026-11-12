@@ -2,6 +2,8 @@
 
 AWSの設計・構築・運用、CI/CD、脅威検知・対応を学ぶための個人開発。
 
+リポジトリ：[Toridesu/reading-log](https://github.com/Toridesu/reading-log)
+
 進捗は [TODO.md](TODO.md) で管理する。個人開発として、小さく動く単位で作っていく。
 
 現在はステップ1「Goアプリの骨組み」まで実装・確認済み。トップ画面、ヘルスチェック、JSONログが動く。DB、ログイン、読書タスクの操作はこれから追加する。
