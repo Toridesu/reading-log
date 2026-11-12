@@ -12,6 +12,7 @@ import (
 	"syscall"
 	"time"
 
+	"readinglog/internal/database"
 	"readinglog/internal/web"
 )
 
@@ -30,7 +31,16 @@ func run(logger *slog.Logger) error {
 		addr = "127.0.0.1:8080"
 	}
 
-	handler, err := web.NewHandler(logger)
+	connectCtx, cancelConnect := context.WithTimeout(context.Background(), 5*time.Second)
+	db, err := database.Open(connectCtx, os.Getenv("DATABASE_URL"))
+	cancelConnect()
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+	logger.Info("database_connected")
+
+	handler, err := web.NewHandler(logger, db.PingContext)
 	if err != nil {
 		return fmt.Errorf("prepare HTTP handler: %w", err)
 	}

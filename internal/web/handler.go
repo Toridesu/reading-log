@@ -2,8 +2,10 @@ package web
 
 import (
 	"bytes"
+	"context"
 	"crypto/rand"
 	"embed"
+	"errors"
 	"html/template"
 	"io/fs"
 	"log/slog"
@@ -17,7 +19,10 @@ import (
 var assets embed.FS
 
 // NewHandler はURLごとの処理と共通のリクエストログを組み立てる。
-func NewHandler(logger *slog.Logger) (http.Handler, error) {
+func NewHandler(logger *slog.Logger, pingDB func(context.Context) error) (http.Handler, error) {
+	if pingDB == nil {
+		return nil, errors.New("database health check is required")
+	}
 	pages, err := template.ParseFS(assets, "templates/*.html")
 	if err != nil {
 		return nil, err
@@ -40,10 +45,23 @@ func NewHandler(logger *slog.Logger) (http.Handler, error) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		_, _ = w.Write(body.Bytes())
 	})
-	// HTTPサーバーの稼働確認。DBの接続確認はまだ含まない。
+	// 稼働確認とDBへの接続確認を分け、DB停止時もプロセスの状態を調べられる。
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Cache-Control", "no-store")
+		_, _ = w.Write([]byte("{\"status\":\"ok\"}\n"))
+	})
+	mux.HandleFunc("GET /readyz", func(w http.ResponseWriter, r *http.Request) {
+		ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+		defer cancel()
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Cache-Control", "no-store")
+		if err := pingDB(ctx); err != nil {
+			logger.Warn("database_unavailable", "request_id", w.Header().Get("X-Request-ID"))
+			w.WriteHeader(http.StatusServiceUnavailable)
+			_, _ = w.Write([]byte("{\"status\":\"unavailable\"}\n"))
+			return
+		}
 		_, _ = w.Write([]byte("{\"status\":\"ok\"}\n"))
 	})
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServerFS(static)))

@@ -2,7 +2,9 @@ package web
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -20,13 +22,14 @@ func TestRoutes(t *testing.T) {
 	}{
 		{http.MethodGet, "/", http.StatusOK, "読書ノート"},
 		{http.MethodGet, "/healthz", http.StatusOK, `{"status":"ok"}`},
+		{http.MethodGet, "/readyz", http.StatusOK, `{"status":"ok"}`},
 		{http.MethodGet, "/static/app.css", http.StatusOK, "body"},
 		{http.MethodGet, "/missing", http.StatusNotFound, "404"},
 		{http.MethodPost, "/healthz", http.StatusMethodNotAllowed, "Method Not Allowed"},
 	} {
 		t.Run(tc.method+" "+tc.path, func(t *testing.T) {
 			var logs bytes.Buffer
-			h, err := NewHandler(slog.New(slog.NewJSONHandler(&logs, nil)))
+			h, err := NewHandler(slog.New(slog.NewJSONHandler(&logs, nil)), func(context.Context) error { return nil })
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -56,7 +59,7 @@ func TestRoutes(t *testing.T) {
 // TestRequestLogExcludesCredentials は、ダミーの認証情報がログに残らないことを確認する。
 func TestRequestLogExcludesCredentials(t *testing.T) {
 	var logs bytes.Buffer
-	h, err := NewHandler(slog.New(slog.NewJSONHandler(&logs, nil)))
+	h, err := NewHandler(slog.New(slog.NewJSONHandler(&logs, nil)), func(context.Context) error { return nil })
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -68,5 +71,31 @@ func TestRequestLogExcludesCredentials(t *testing.T) {
 		if strings.Contains(logs.String(), secret) {
 			t.Errorf("log contains %s", secret)
 		}
+	}
+}
+
+func TestReadinessFailureDoesNotExposeDBError(t *testing.T) {
+	var logs bytes.Buffer
+	h, err := NewHandler(slog.New(slog.NewJSONHandler(&logs, nil)), func(ctx context.Context) error {
+		if _, ok := ctx.Deadline(); !ok {
+			t.Error("readiness has no timeout")
+		}
+		return errors.New("private-database-password")
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ready := httptest.NewRecorder()
+	h.ServeHTTP(ready, httptest.NewRequest(http.MethodGet, "/readyz", nil))
+	if ready.Code != http.StatusServiceUnavailable {
+		t.Fatalf("status = %d", ready.Code)
+	}
+	if strings.Contains(ready.Body.String()+logs.String(), "private-database-password") {
+		t.Fatal("DB details leaked")
+	}
+	live := httptest.NewRecorder()
+	h.ServeHTTP(live, httptest.NewRequest(http.MethodGet, "/healthz", nil))
+	if live.Code != http.StatusOK {
+		t.Fatalf("liveness = %d", live.Code)
 	}
 }

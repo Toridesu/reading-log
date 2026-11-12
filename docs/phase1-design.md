@@ -1,8 +1,8 @@
 # フェーズ1：構成案と最初の到達点
 
-更新日：2026-11-11（日本時間）
+更新日：2026-11-12（日本時間）
 
-状態：Goアプリの骨組みを実装し、HTTP応答・ログ・テスト・正常終了を確認済み。DB・OIDC・CRUD・Terraform・AWS実機検証は未実施。進捗は[TODO](../TODO.md)、Go・OIDCの採用理由は[ADR-0002](adr/0002-go-and-oidc.md)を参照。
+状態：Goアプリの骨組みとPostgreSQL接続・SQLマイグレーションを実装。HTTP応答・ログ・DB制約・永続化・DB停止と復旧をローカル確認済み。OIDC・CRUD・Terraform・AWS実機検証は未実施。進捗は[TODO](../TODO.md)、Go・OIDCの採用理由は[ADR-0002](adr/0002-go-and-oidc.md)を参照。
 
 ## 進め方
 
@@ -169,4 +169,4 @@ ECRのイメージレイヤーを取得するS3通信はGateway Endpointへ流�
 - 設計判断：`docs/adr/` に理由・代替案・影響を記録。
 - 構築・削除・障害調査・復元手順：実装に合わせて `docs/runbooks/` へ追加。
 - 検証結果：`docs/verification/` に実行日、環境、手順、期待結果、実測結果、未検証項目を記録。
-- 現時点の検証結果：[Goアプリの骨組み](verification/01-go-foundation.md)をローカルで確認済み。認証・DB・AWSの検証はこれから行う。
+- 現時点の検証結果：[Goアプリの骨組み](verification/01-go-foundation.md)と[PostgreSQL](verification/02-postgresql.md)をローカル確認済み。認証・CRUD・AWSの検証はこれから行う。
