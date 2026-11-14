@@ -12,3 +12,7 @@ coverage.out
 
 __pycache__/
 *.pyc
+
+# ローカルDBのバックアップにも個人データが含まれる。
+*.dump
+*.dump.sha256

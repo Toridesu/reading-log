@@ -2,7 +2,7 @@
 
 更新日：2026-11-15（日本時間）
 
-状態：Goアプリの骨組みとPostgreSQL接続・SQLマイグレーションを実装。HTTP応答・ログ・DB制約・永続化・DB停止と復旧をローカル確認済み。KeycloakによるOIDC・DBセッションも実装。CRUD・所有者制限もローカルで検証済み。Terraform・AWS実機検証は未実施。進捗は[TODO](../TODO.md)、Go・OIDCの採用理由は[ADR-0002](adr/0002-go-and-oidc.md)を参照。
+状態：Goアプリの骨組みとPostgreSQL接続・SQLマイグレーションを実装。HTTP応答・ログ・DB制約・永続化・DB停止と復旧をローカル確認済み。KeycloakによるOIDC・DBセッションも実装。CRUD・所有者制限、DB障害調査・別DBへのバックアップ復元もローカルで検証済み。Terraform・AWS実機検証は未実施。進捗は[TODO](../TODO.md)、Go・OIDCの採用理由は[ADR-0002](adr/0002-go-and-oidc.md)を参照。
 
 ## 進め方
 
@@ -150,7 +150,7 @@ ECRのイメージレイヤーを取得するS3通信はGateway Endpointへ流�
 
 ### バックアップ・削除の設計方針
 
-- ローカルは論理バックアップから別DBへ復元し、件数・所有者・内容を照合する。
+- ローカルは論理バックアップから別DBへ復元し、件数・所有者・内容・採番位置を照合する。sessionsとlogin_requestsは行を除外し、復元後に再ログインする。既存のKeycloakを使う。操作・設計理由は[ローカル運用手順](runbooks/local-operations.md)を参照。
 - AWSではRDS自動バックアップを有効にし、初期保持期間を7日とする。スナップショット復元を最初に、ポイントインタイム復元を次の演習にする。
 - AWSの復元先は別のDBインスタンスとし、接続先の切替・認証情報・SG・復元時間を記録する。論理バックアップの成功をRDS復元成功と扱わない。
 - Terraformのstate基盤、アプリ環境、保持するバックアップを別のライフサイクルで管理する。
@@ -169,4 +169,4 @@ ECRのイメージレイヤーを取得するS3通信はGateway Endpointへ流�
 - 設計判断：`docs/adr/` に理由・代替案・影響を記録。
 - 構築・削除・障害調査・復元手順：実装に合わせて `docs/runbooks/` へ追加。
 - 検証結果：`docs/verification/` に実行日、環境、手順、期待結果、実測結果、未検証項目を記録。
-- 現時点の検証結果：[Goアプリの骨組み](verification/01-go-foundation.md)と[PostgreSQL](verification/02-postgresql.md)をローカル確認済み。[ローカル認証](verification/03-oidc.md)も検証。[CRUDと所有者制限](verification/04-reading-tasks.md)もローカル検証済み。AWSの検証はこれから行う。
+- 現時点の検証結果：[Goアプリの骨組み](verification/01-go-foundation.md)と[PostgreSQL](verification/02-postgresql.md)をローカル確認済み。[ローカル認証](verification/03-oidc.md)も検証。[CRUDと所有者制限](verification/04-reading-tasks.md)もローカル検証済み。[障害調査とDB復元](verification/05-local-operations.md)も実施。AWSの検証はこれから行う。

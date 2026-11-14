@@ -4,7 +4,7 @@ AWSの設計・構築・運用、CI/CD、脅威検知・対応を学ぶための
 
 リポジトリ：[Toridesu/reading-log](https://github.com/Toridesu/reading-log)。進捗は [TODO.md](TODO.md) で管理する。
 
-現在はステップ4まで実装。Keycloak経由のログイン・ログアウトと、自分の読書タスクの作成・一覧・編集・削除が動く。次はログ調査とDBのバックアップ・復元を試す。当面はAWSリソースを作成しない。
+現在はステップ5まで完了。Keycloak経由のログイン・ログアウトと、自分の読書タスクの作成・一覧・編集・削除が動く。DB停止からの復旧と、バックアップを別DBへ戻して操作する検証も完了した。次はAWS用のコンテナ・Terraform定義を用意する。当面はAWSリソースを作成しない。
 
 ## 起動
 
@@ -49,6 +49,17 @@ python3 scripts/verify-login.py
 
 アプリの標準出力はJSONログ。レスポンスの `X-Request-ID` とログの `request_id` を照合し、`path`、`status`、`duration_ms` を見る。DB障害時には `database_unavailable` を記録する。クエリ文字列、Authorization、Cookie、リクエスト本文は記録しない。
 
+## バックアップと復元
+
+Goアプリを停止し、DBとKeycloakを起動した状態で、一連の運用演習を再実行できる。DBを一時停止・再開し、復元用DBは最後に削除する。
+
+```bash
+bash scripts/go.sh build -o bin/readinglog ./cmd/web
+python3 scripts/verify-operations.py
+```
+
+個別のバックアップ・復元・照合は `python3 scripts/local-db.py --help` を参照。[障害調査・復元・削除の手順](docs/runbooks/local-operations.md)に説明をまとめた。
+
 ## 設定
 
 設定項目は [.env.example](.env.example)、実際の値はローカルの `.env` に置く。
@@ -83,7 +94,7 @@ migrations/              テーブル定義のSQL
 compose.yaml             ローカルのPostgreSQLとKeycloak
 docker/postgres/         初回のDBユーザー・テスト用DB作成
 docker/keycloak/         ローカル認証用realm・クライアント・2ユーザー
-scripts/                 設定生成とGoの実行補助
+scripts/                 設定生成、Go実行補助、検証、DBバックアップ・復元
 docs/                    設計判断・手順・検証記録
 TODO.md                  作業順と進捗
 ```
@@ -101,5 +112,7 @@ TODO.md                  作業順と進捗
 - [ステップ3の検証結果](docs/verification/03-oidc.md)
 - [読書タスクの操作・認可・調査手順](docs/runbooks/reading-tasks.md)
 - [ステップ4の検証結果](docs/verification/04-reading-tasks.md)
+- [障害調査・バックアップ・復元手順](docs/runbooks/local-operations.md)
+- [ステップ5の検証結果](docs/verification/05-local-operations.md)
 
 UIは不要なセカンダリラベルや説明を避け、レイアウトで伝える。
