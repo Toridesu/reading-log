@@ -4,7 +4,7 @@ AWSの設計・構築・運用、CI/CD、脅威検知・対応を学ぶための
 
 リポジトリ：[Toridesu/reading-log](https://github.com/Toridesu/reading-log)。進捗は [TODO.md](TODO.md) で管理する。
 
-現在はステップ3まで実装。Keycloak経由のログイン・ログアウト、DBセッション、ログイン必須のページが動く。次は読書タスクの作成・一覧・編集・削除と所有者の確認を追加する。当面はAWSリソースを作成しない。
+現在はステップ4まで実装。Keycloak経由のログイン・ログアウトと、自分の読書タスクの作成・一覧・編集・削除が動く。次はログ調査とDBのバックアップ・復元を試す。当面はAWSリソースを作成しない。
 
 ## 起動
 
@@ -19,6 +19,8 @@ bash scripts/dev.sh run -buildvcs=false ./cmd/web
 
 [http://localhost:8080](http://localhost:8080) を開く。`ログイン` を押し、ユーザー名 `alice` または `bob` と、`.env` の `LOCAL_USER_PASSWORD` の値を入力する。必ず `localhost` で開く。
 
+ログイン後は「本を追加」から書名・状態・メモを登録できる。他人の本は一覧に出ず、URLを直接指定しても操作できない。[操作・認可・ログの説明](docs/runbooks/reading-tasks.md)を参照。
+
 アプリの停止は `Ctrl+C`。DBとKeycloakも止める場合は `docker compose stop`。データは残る。
 
 初回のスクリプトはランダムなDBパスワードを含む `.env` を作る。既存の値を保持して足りない設定だけ追加し、Gitにも含めない。`scripts/dev.sh` はこのファイルを読み込んでGoを実行する。
@@ -32,7 +34,7 @@ Go 1.27.4は、この環境では `.tools/go` に配置済み。`scripts/go.sh` 
 bash scripts/go.sh test ./...
 bash scripts/go.sh vet ./...
 
-# DB起動後：実DBのマイグレーション・制約も検証
+# DB起動後：実DBのマイグレーション・制約・セッション・所有者制限も検証
 bash scripts/dev.sh test ./...
 
 # アプリ起動後
@@ -76,6 +78,7 @@ cmd/migrate/             テーブル変更の適用・状態確認
 internal/web/            HTTPルート、ログ、画面、テスト
 internal/database/       DB接続とマイグレーション、DBテスト
 internal/auth/           OIDC、DBセッション、Cookie、認証テスト
+internal/books/          読書タスクの項目、入力検証、所有者を条件にしたSQL
 migrations/              テーブル定義のSQL
 compose.yaml             ローカルのPostgreSQLとKeycloak
 docker/postgres/         初回のDBユーザー・テスト用DB作成
@@ -96,5 +99,7 @@ TODO.md                  作業順と進捗
 - [ステップ1の検証結果](docs/verification/01-go-foundation.md)
 - [ステップ2の検証結果](docs/verification/02-postgresql.md)
 - [ステップ3の検証結果](docs/verification/03-oidc.md)
+- [読書タスクの操作・認可・調査手順](docs/runbooks/reading-tasks.md)
+- [ステップ4の検証結果](docs/verification/04-reading-tasks.md)
 
 UIは不要なセカンダリラベルや説明を避け、レイアウトで伝える。

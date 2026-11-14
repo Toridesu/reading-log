@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="ja">
+  {{template "head" .}}
+  <body><main class="notebook">
+    {{template "header" .}}
+    <section class="confirmation">
+      <h2>この本を削除しますか？</h2>
+      <p class="book-title">{{.Book.Title}}</p>
+      <form method="post" action="/books/{{.Book.ID}}/delete">
+        <input type="hidden" name="csrf_token" value="{{.Session.CSRFToken}}">
+        <div class="form-actions"><a href="/books/{{.Book.ID}}">キャンセル</a><button class="danger" type="submit">削除する</button></div>
+      </form>
+    </section>
+  </main></body>
+</html>

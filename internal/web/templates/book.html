@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="ja">
+  {{template "head" .}}
+  <body><main class="notebook">
+    {{template "header" .}}
+    <div class="toolbar"><a href="/books">一覧へ</a><a class="button" href="/books/{{.Book.ID}}/edit">編集</a></div>
+    <article class="book-detail">
+      <h2>{{.Book.Title}}</h2>
+      <span class="status status-{{.Book.Status}}">{{.Book.StatusLabel}}</span>
+      {{if .Book.Notes}}<div class="notes">{{.Book.Notes}}</div>{{end}}
+    </article>
+    <div class="detail-actions"><a class="danger-link" href="/books/{{.Book.ID}}/delete">削除</a></div>
+  </main></body>
+</html>

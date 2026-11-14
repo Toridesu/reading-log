@@ -227,7 +227,7 @@ func (s *Service) Logout(w http.ResponseWriter, r *http.Request) {
 		s.reject(w, r, 400, "invalid_host")
 		return
 	}
-	if r.Header.Get("Origin") != s.cfg.BaseURL {
+	if !s.CheckOrigin(r) {
 		s.reject(w, r, 403, "invalid_origin")
 		return
 	}
@@ -264,3 +264,6 @@ func (s *Service) CheckHost(r *http.Request) bool {
 	origin, _ := url.Parse(s.cfg.BaseURL)
 	return strings.EqualFold(r.Host, origin.Host)
 }
+
+// CheckOriginはフォーム送信元が設定済みのアプリURLと一致するか確認する。
+func (s *Service) CheckOrigin(r *http.Request) bool { return r.Header.Get("Origin") == s.cfg.BaseURL }

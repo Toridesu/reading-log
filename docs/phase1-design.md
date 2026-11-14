@@ -1,8 +1,8 @@
 # フェーズ1：構成案と最初の到達点
 
-更新日：2026-11-14（日本時間）
+更新日：2026-11-15（日本時間）
 
-状態：Goアプリの骨組みとPostgreSQL接続・SQLマイグレーションを実装。HTTP応答・ログ・DB制約・永続化・DB停止と復旧をローカル確認済み。KeycloakによるOIDC・DBセッションも実装。CRUD・Terraform・AWS実機検証は未実施。進捗は[TODO](../TODO.md)、Go・OIDCの採用理由は[ADR-0002](adr/0002-go-and-oidc.md)を参照。
+状態：Goアプリの骨組みとPostgreSQL接続・SQLマイグレーションを実装。HTTP応答・ログ・DB制約・永続化・DB停止と復旧をローカル確認済み。KeycloakによるOIDC・DBセッションも実装。CRUD・所有者制限もローカルで検証済み。Terraform・AWS実機検証は未実施。進捗は[TODO](../TODO.md)、Go・OIDCの採用理由は[ADR-0002](adr/0002-go-and-oidc.md)を参照。
 
 ## 進め方
 
@@ -39,7 +39,7 @@ Go + 標準ライブラリの `net/http` / `html/template` + PostgreSQLを採用
 - 検証済みIDトークンのissuerとsubject（`iss` + `sub`）から内部ユーザーIDを決める。メールアドレスを所有者識別子に使わない。
 - 作成時の所有者は認証済みの内部ユーザーIDからサーバー側で設定する。フォームの所有者指定は受け付けない。
 - 一覧・取得・更新・削除のすべてで所有者を条件に含める。他人のIDへのアクセスは404に統一する。
-- ローカルではDocker ComposeでWeb、PostgreSQL、Keycloakを動かす。Go単体の開発・テストはWSL上でも実行できるようにする。AWSではアプリイメージをECRからFargateへ配布する。
+- 現在のローカル構成は、Docker ComposeでPostgreSQL・Keycloak、WSL上でGoを動かす。Webのコンテナ化はステップ6で行う。AWSではアプリイメージをECRからFargateへ配布する。
 - GoのバイナリがHTTPサーバーとして動作する。フロントエンドのビルドにNode.jsを必要としない。
 - ブラウザーにはランダムなセッションIDだけをCookieで渡し、セッションはDBで管理する。ID・アクセストークンをlocalStorageへ保存しない。
 - 認証コールバックでstate・nonce・PKCEとIDトークンの署名・issuer・audience・有効期限を検証する。使用済みのログイン処理情報は再利用できなくする。
@@ -146,7 +146,7 @@ ECRのイメージレイヤーを取得するS3通信はGateway Endpointへ流�
 6. コンテナを再起動してもDBの内容が残る。
 7. request_idを手掛かりにアプリログから対象操作を追える。ログインの失敗理由を利用者へ過剰に開示しない。
 
-実装時に実際の起動・ユーザー作成・テストコマンドを構築手順へ追加する。アプリの調査ではComposeのWebとKeycloakのログ、設定ではOIDC issuer/client ID/redirect URIとGoの設定項目、DBではマイグレーション状態を確認できるようにする。Keycloakでの成功をCognitoでの成功と扱わず、後日のAWS実機検証で同じ認証フローを再確認する。
+実装時に実際の起動・ユーザー作成・テストコマンドを構築手順へ追加する。アプリの調査ではGoの標準出力とComposeのKeycloakのログ、設定ではOIDC issuer/client ID/redirect URIとGoの設定項目、DBではマイグレーション状態を確認できるようにする。Keycloakでの成功をCognitoでの成功と扱わず、後日のAWS実機検証で同じ認証フローを再確認する。
 
 ### バックアップ・削除の設計方針
 
@@ -169,4 +169,4 @@ ECRのイメージレイヤーを取得するS3通信はGateway Endpointへ流�
 - 設計判断：`docs/adr/` に理由・代替案・影響を記録。
 - 構築・削除・障害調査・復元手順：実装に合わせて `docs/runbooks/` へ追加。
 - 検証結果：`docs/verification/` に実行日、環境、手順、期待結果、実測結果、未検証項目を記録。
-- 現時点の検証結果：[Goアプリの骨組み](verification/01-go-foundation.md)と[PostgreSQL](verification/02-postgresql.md)をローカル確認済み。[ローカル認証](verification/03-oidc.md)も検証。CRUD・AWSの検証はこれから行う。
+- 現時点の検証結果：[Goアプリの骨組み](verification/01-go-foundation.md)と[PostgreSQL](verification/02-postgresql.md)をローカル確認済み。[ローカル認証](verification/03-oidc.md)も検証。[CRUDと所有者制限](verification/04-reading-tasks.md)もローカル検証済み。AWSの検証はこれから行う。

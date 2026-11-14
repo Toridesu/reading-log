@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="ja">
+  {{template "head" .}}
+  <body><main class="notebook">
+    {{template "header" .}}
+    <div class="toolbar"><h2>{{.PageTitle}}</h2><a href="{{if .Book.ID}}/books/{{.Book.ID}}{{else}}/books{{end}}">戻る</a></div>
+    <form class="book-form" method="post" action="{{.FormAction}}">
+      <input type="hidden" name="csrf_token" value="{{.Session.CSRFToken}}">
+      <div class="field">
+        <label for="title">書名</label>
+        <input id="title" name="title" value="{{.Input.Title}}" required {{if .Errors.title}}aria-invalid="true" aria-describedby="title-error"{{end}}>
+        {{with .Errors.title}}<p class="field-error" id="title-error" role="alert">{{.}}</p>{{end}}
+      </div>
+      <div class="field status-field">
+        <label for="status">状態</label>
+        <select id="status" name="status" {{if .Errors.status}}aria-invalid="true" aria-describedby="status-error"{{end}}>
+          <option value="unread" {{if eq .Input.Status "unread"}}selected{{end}}>未読</option>
+          <option value="reading" {{if eq .Input.Status "reading"}}selected{{end}}>読書中</option>
+          <option value="finished" {{if eq .Input.Status "finished"}}selected{{end}}>読了</option>
+        </select>
+        {{with .Errors.status}}<p class="field-error" id="status-error" role="alert">{{.}}</p>{{end}}
+      </div>
+      <div class="field">
+        <label for="notes">メモ</label>
+        <textarea id="notes" name="notes" rows="8" {{if .Errors.notes}}aria-invalid="true" aria-describedby="notes-error"{{end}}>{{.Input.Notes}}</textarea>
+        {{with .Errors.notes}}<p class="field-error" id="notes-error" role="alert">{{.}}</p>{{end}}
+      </div>
+      <div class="form-actions"><button class="primary" type="submit">{{.SubmitLabel}}</button></div>
+    </form>
+  </main></body>
+</html>

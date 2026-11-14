@@ -1,7 +1,6 @@
 package web
 
 import (
-	"bytes"
 	"context"
 	"crypto/rand"
 	"embed"
@@ -14,6 +13,7 @@ import (
 	"time"
 
 	"readinglog/internal/auth"
+	"readinglog/internal/books"
 )
 
 // HTMLとCSSを実行ファイルへ埋め込む。
@@ -28,12 +28,13 @@ type Authentication interface {
 	Logout(http.ResponseWriter, *http.Request)
 	Session(*http.Request) (auth.Session, error)
 	CheckHost(*http.Request) bool
+	CheckOrigin(*http.Request) bool
 }
 
 // NewHandler はURLごとの処理と共通のリクエストログを組み立てる。
-func NewHandler(logger *slog.Logger, pingDB func(context.Context) error, login Authentication) (http.Handler, error) {
-	if pingDB == nil || login == nil {
-		return nil, errors.New("database health check and authentication are required")
+func NewHandler(logger *slog.Logger, pingDB func(context.Context) error, login Authentication, store books.Store) (http.Handler, error) {
+	if pingDB == nil || login == nil || store == nil {
+		return nil, errors.New("database health check, authentication and book store are required")
 	}
 	pages, err := template.ParseFS(assets, "templates/*.html")
 	if err != nil {
@@ -45,47 +46,33 @@ func NewHandler(logger *slog.Logger, pingDB func(context.Context) error, login A
 	}
 
 	mux := http.NewServeMux()
-	// ホームは公開、/booksはDBで有効なセッションを確認できた人だけに表示する。
-	render := func(w http.ResponseWriter, r *http.Request, session *auth.Session) {
-		var body bytes.Buffer
-		if err := pages.ExecuteTemplate(&body, "home.html", session); err != nil {
-			logger.Error("render_failed", "request_id", w.Header().Get("X-Request-ID"))
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+	h := &bookHandler{logger: logger, login: login, store: store, pages: pages}
+	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "no-store")
+		if !login.CheckHost(r) {
+			http.Error(w, "Bad Request", 400)
 			return
 		}
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		_, _ = w.Write(body.Bytes())
-	}
-	page := func(protected bool) http.HandlerFunc {
-		return func(w http.ResponseWriter, r *http.Request) {
-			if !login.CheckHost(r) {
-				http.Error(w, "Bad Request", 400)
-				return
-			}
-			w.Header().Set("Cache-Control", "no-store")
-			session, err := login.Session(r)
-			if errors.Is(err, auth.ErrUnauthenticated) {
-				if protected {
-					http.Redirect(w, r, "/", http.StatusSeeOther)
-				} else {
-					render(w, r, nil)
-				}
-				return
-			}
-			if err != nil {
-				logger.Warn("session_unavailable", "request_id", w.Header().Get("X-Request-ID"))
-				http.Error(w, "Service Unavailable", 503)
-				return
-			}
-			if !protected {
-				http.Redirect(w, r, "/books", http.StatusSeeOther)
-				return
-			}
-			render(w, r, &session)
+		_, err := login.Session(r)
+		if errors.Is(err, auth.ErrUnauthenticated) {
+			h.render(w, r, "home.html", 200, pageData{PageTitle: "読書ノート"})
+			return
 		}
-	}
-	mux.HandleFunc("GET /{$}", page(false))
-	mux.HandleFunc("GET /books", page(true))
+		if err != nil {
+			logger.Warn("session_unavailable", "request_id", w.Header().Get("X-Request-ID"))
+			h.render(w, r, "error.html", 503, pageData{PageTitle: "一時的に利用できません", ErrorTitle: "一時的に利用できません"})
+			return
+		}
+		http.Redirect(w, r, "/books", http.StatusSeeOther)
+	})
+	mux.HandleFunc("GET /books", h.withUser(h.list))
+	mux.HandleFunc("GET /books/new", h.withUser(h.new))
+	mux.HandleFunc("POST /books", h.withUser(h.save(true)))
+	mux.HandleFunc("GET /books/{id}", h.withUser(h.show("book.html")))
+	mux.HandleFunc("GET /books/{id}/edit", h.withUser(h.show("book-form.html")))
+	mux.HandleFunc("POST /books/{id}", h.withUser(h.save(false)))
+	mux.HandleFunc("GET /books/{id}/delete", h.withUser(h.show("book-delete.html")))
+	mux.HandleFunc("POST /books/{id}/delete", h.withUser(h.delete))
 	mux.HandleFunc("GET /auth/login", login.Login)
 	mux.HandleFunc("GET /auth/callback", login.Callback)
 	mux.HandleFunc("POST /auth/logout", login.Logout)

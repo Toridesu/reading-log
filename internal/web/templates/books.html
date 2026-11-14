@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="ja">
+  {{template "head" .}}
+  <body><main class="notebook">
+    {{template "header" .}}
+    <div class="toolbar"><h2>本棚</h2><a class="button primary" href="/books/new">本を追加</a></div>
+    {{if .Books}}<ul class="book-list">
+      {{range .Books}}<li><a href="/books/{{.ID}}">
+        <span class="book-title">{{.Title}}</span>
+        <span class="status status-{{.Status}}">{{.StatusLabel}}</span>
+      </a></li>{{end}}
+    </ul>{{else}}<p class="empty">{{if .PreviousPage}}このページには本がありません。{{else}}まだ本がありません。{{end}}</p>{{end}}
+    {{if or .PreviousPage .NextPage}}<nav class="pagination" aria-label="本棚のページ">
+      {{if .PreviousPage}}<a href="/books?page={{.PreviousPage}}">前へ</a>{{end}}
+      {{if .NextPage}}<a href="/books?page={{.NextPage}}">次へ</a>{{end}}
+    </nav>{{end}}
+  </main></body>
+</html>

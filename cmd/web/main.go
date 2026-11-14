@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"readinglog/internal/auth"
+	"readinglog/internal/books"
 	"readinglog/internal/database"
 	"readinglog/internal/web"
 )
@@ -51,7 +52,7 @@ func run(logger *slog.Logger) error {
 		return err
 	}
 	logger.Info("oidc_connected")
-	handler, err := web.NewHandler(logger, db.PingContext, login)
+	handler, err := web.NewHandler(logger, db.PingContext, login, books.PostgresStore{DB: db})
 	if err != nil {
 		return fmt.Errorf("prepare HTTP handler: %w", err)
 	}

@@ -32,7 +32,7 @@ func TestRoutes(t *testing.T) {
 	} {
 		t.Run(tc.method+" "+tc.path, func(t *testing.T) {
 			var logs bytes.Buffer
-			h, err := NewHandler(slog.New(slog.NewJSONHandler(&logs, nil)), func(context.Context) error { return nil }, guestAuth{})
+			h, err := NewHandler(slog.New(slog.NewJSONHandler(&logs, nil)), func(context.Context) error { return nil }, guestAuth{}, newBookStore())
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -62,7 +62,7 @@ func TestRoutes(t *testing.T) {
 // TestRequestLogExcludesCredentials は、ダミーの認証情報がログに残らないことを確認する。
 func TestRequestLogExcludesCredentials(t *testing.T) {
 	var logs bytes.Buffer
-	h, err := NewHandler(slog.New(slog.NewJSONHandler(&logs, nil)), func(context.Context) error { return nil }, guestAuth{})
+	h, err := NewHandler(slog.New(slog.NewJSONHandler(&logs, nil)), func(context.Context) error { return nil }, guestAuth{}, newBookStore())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -84,7 +84,7 @@ func TestReadinessFailureDoesNotExposeDBError(t *testing.T) {
 			t.Error("readiness has no timeout")
 		}
 		return errors.New("private-database-password")
-	}, guestAuth{})
+	}, guestAuth{}, newBookStore())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -116,7 +116,7 @@ func (guestAuth) CheckHost(r *http.Request) bool { return true }
 
 func TestBooksRequiresLogin(t *testing.T) {
 	var logs bytes.Buffer
-	h, err := NewHandler(slog.New(slog.NewJSONHandler(&logs, nil)), func(context.Context) error { return nil }, guestAuth{})
+	h, err := NewHandler(slog.New(slog.NewJSONHandler(&logs, nil)), func(context.Context) error { return nil }, guestAuth{}, newBookStore())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -138,7 +138,7 @@ func (signedInAuth) Session(r *http.Request) (auth.Session, error) {
 
 func TestAuthenticatedPageEscapesName(t *testing.T) {
 	var logs bytes.Buffer
-	h, err := NewHandler(slog.New(slog.NewJSONHandler(&logs, nil)), func(context.Context) error { return nil }, signedInAuth{})
+	h, err := NewHandler(slog.New(slog.NewJSONHandler(&logs, nil)), func(context.Context) error { return nil }, signedInAuth{}, newBookStore())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -155,7 +155,7 @@ func TestAuthenticatedPageEscapesName(t *testing.T) {
 
 func TestCallbackDoesNotSendReferrer(t *testing.T) {
 	var logs bytes.Buffer
-	h, err := NewHandler(slog.New(slog.NewJSONHandler(&logs, nil)), func(context.Context) error { return nil }, guestAuth{})
+	h, err := NewHandler(slog.New(slog.NewJSONHandler(&logs, nil)), func(context.Context) error { return nil }, guestAuth{}, newBookStore())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -164,4 +164,8 @@ func TestCallbackDoesNotSendReferrer(t *testing.T) {
 	if w.Header().Get("Referrer-Policy") != "no-referrer" {
 		t.Fatal("callback could send authorization code in Referer")
 	}
+}
+
+func (guestAuth) CheckOrigin(r *http.Request) bool {
+	return r.Header.Get("Origin") == "http://example.com"
 }
