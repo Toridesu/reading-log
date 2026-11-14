@@ -35,3 +35,17 @@ h1 { margin: 0; font-size: 24px; font-weight: 600; letter-spacing: 0.08em; }
   .notebook { margin-top: 40px; }
   h1 { font-size: 22px; }
 }
+
+.account { margin-left: auto; display: flex; align-items: center; gap: 18px; font-size: 14px; }
+.account form { margin: 0; }
+button, .login-button { font: inherit; border-radius: 6px; cursor: pointer; }
+button { padding: 8px 12px; color: inherit; border: 1px solid #cdd4c9; background: transparent; }
+.welcome { display: flex; justify-content: center; padding: 72px 0; }
+.login-button { padding: 12px 32px; background: #365e4d; color: #fff; text-decoration: none; }
+button:hover { background: #e9ede4; }
+.login-button:hover { background: #284938; }
+a:focus-visible, button:focus-visible { outline: 3px solid #8a7047; outline-offset: 4px; }
+@media (max-width: 600px) {
+ header { flex-wrap: wrap; }
+ .account { flex-basis: 100%; justify-content: flex-end; }
+}

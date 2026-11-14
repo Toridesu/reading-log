@@ -26,9 +26,10 @@ flowchart LR
 | `users` | OIDCのissuerとsubjectの組を内部ユーザーIDへ対応づける |
 | `sessions` | セッションIDのSHA-256ハッシュ、ユーザー、期限を保持する |
 | `reading_tasks` | ユーザーごとの書名・状態・メモを保持する |
+| `login_requests` | ログイン途中のstate・ブラウザーのハッシュ、nonce、PKCE verifierを保持する |
 | `goose_db_version` | SQLの適用履歴を管理する |
 
-現段階はスキーマの準備まで。ログイン、期限を過ぎたセッションの拒否、タスク操作時の所有者確認は次の実装で行う。`updated_at` は後でアプリの更新SQLから更新する。
+ステップ3でログイン・セッション失効と期限確認を実装した。タスク操作時の所有者確認はステップ4で行う。`updated_at` は後でアプリの更新SQLから更新する。
 
 アプリとマイグレーションは専用ロール `readinglog` を共用する。スーパーユーザー権限・DB作成・ロール作成権限は付けない。ローカル開発用の対象スキーマは所有するため、テーブルを変更・削除できる。実行用と変更用の権限分離は後の拡張とする。
 
@@ -36,19 +37,19 @@ flowchart LR
 
 ```bash
 bash scripts/setup-local.sh
-docker compose up -d --wait db
+docker compose up -d --wait db keycloak
 bash scripts/dev.sh run -buildvcs=false ./cmd/migrate status
 bash scripts/dev.sh run -buildvcs=false ./cmd/migrate up
 bash scripts/dev.sh run -buildvcs=false ./cmd/web
 ```
 
-最初の `up` は `applied 1 migration(s)`、同じSQLの再実行は `applied 0 migration(s)`。アプリ起動時には自動適用しない。SQLはバイナリに埋め込み、適用中はPostgreSQLのアドバイザリロックで他のマイグレーション実行と競合しないようにする。
+空のDBでの最初の `up` は、現在のSQL2ファイルを適用して `applied 2 migration(s)`、同じSQLの再実行は `applied 0 migration(s)`。アプリ起動時には自動適用しない。SQLはバイナリに埋め込み、適用中はPostgreSQLのアドバイザリロックで他のマイグレーション実行と競合しないようにする。
 
-適用済みSQLの書き換えではなく、次の変更は `migrations/00002_名前.sql` のような新しいファイルに追加する。通常の操作は `up` と `status`。初期SQLのDown節はテーブルを削除するため、今回のコマンドには公開していない。
+適用済みSQLの書き換えではなく、次の変更は `migrations/00003_名前.sql` のような新しいファイルに追加する。通常の操作は `up` と `status`。初期SQLのDown節はテーブルを削除するため、今回のコマンドには公開していない。
 
 ## 設定と接続
 
-初回に生成する `.env` は所有者だけが読み書きでき、Git管理対象外。`scripts/dev.sh` はシェル設定として読み込むため、自分で生成・編集したものを使う。既存ファイルがある場合、セットアップは上書きしない。
+初回に生成する `.env` は所有者だけが読み書きでき、Git管理対象外。`scripts/dev.sh` はシェル設定として読み込むため、自分で生成・編集したものを使う。既存の値は保持し、不足する設定だけ追加する。
 
 DBの公開先は `127.0.0.1` に限定する。接続URLの `sslmode=disable` はこのローカル開発専用。RDS接続ではTLSと証明書検証を設定する。
 
@@ -100,7 +101,7 @@ bash scripts/dev.sh test ./...
 | 再開 | `docker compose up -d --wait db` | 残る |
 | DBコンテナの再作成 | `docker compose up -d --force-recreate --wait db` | ボリュームから引き継ぐ |
 | コンテナとネットワークの削除 | `docker compose down` | ボリュームは残る |
-| DBデータも初期化 | `docker compose down -v` | **このComposeの名前付きボリュームを削除する** |
+| DBデータも初期化 | `docker compose down -v` | **PostgreSQLとKeycloakの両方の名前付きボリュームを削除する** |
 
 普段は停止だけでよい。データを捨ててよい場合だけ最後の操作を使い、その後の `up` で再初期化してマイグレーションを適用する。`.env` は削除されない。ボリュームの永続化はバックアップではないので、バックアップと別DBへの復元はステップ5で試す。
 

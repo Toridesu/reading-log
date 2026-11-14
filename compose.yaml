@@ -24,5 +24,30 @@ services:
       retries: 20
       start_period: 10s
 
+  # 認証を担当するローカル専用サーバー。開発モードのためAWSへは持ち込まない。
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.8.2
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?Run scripts/setup-local.sh first}
+      KC_HOSTNAME: http://localhost:${KEYCLOAK_PORT:-8081}
+      KC_HEALTH_ENABLED: "true"
+      OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:?Run scripts/setup-local.sh first}
+      LOCAL_USER_PASSWORD: ${LOCAL_USER_PASSWORD:?Run scripts/setup-local.sh first}
+      APP_BASE_URL: ${APP_BASE_URL:-http://localhost:8080}
+    ports:
+      - "127.0.0.1:${KEYCLOAK_PORT:-8081}:8080"
+    volumes:
+      - keycloak_data:/opt/keycloak/data
+      - ./docker/keycloak/reading-log-realm.json:/opt/keycloak/data/import/reading-log-realm.json:ro
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/9000; printf 'GET /health/ready HTTP/1.0\r\n\r\n' >&3; head -1 <&3 | grep -q '200'"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
 volumes:
+  keycloak_data:
   postgres_data:

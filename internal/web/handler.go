@@ -10,7 +10,10 @@ import (
 	"io/fs"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
+
+	"readinglog/internal/auth"
 )
 
 // HTMLとCSSを実行ファイルへ埋め込む。
@@ -18,10 +21,19 @@ import (
 //go:embed templates/*.html static/*
 var assets embed.FS
 
+// Authenticationは画面から利用する認証処理。テストではKeycloakなしで画面の振る舞いを確認する。
+type Authentication interface {
+	Login(http.ResponseWriter, *http.Request)
+	Callback(http.ResponseWriter, *http.Request)
+	Logout(http.ResponseWriter, *http.Request)
+	Session(*http.Request) (auth.Session, error)
+	CheckHost(*http.Request) bool
+}
+
 // NewHandler はURLごとの処理と共通のリクエストログを組み立てる。
-func NewHandler(logger *slog.Logger, pingDB func(context.Context) error) (http.Handler, error) {
-	if pingDB == nil {
-		return nil, errors.New("database health check is required")
+func NewHandler(logger *slog.Logger, pingDB func(context.Context) error, login Authentication) (http.Handler, error) {
+	if pingDB == nil || login == nil {
+		return nil, errors.New("database health check and authentication are required")
 	}
 	pages, err := template.ParseFS(assets, "templates/*.html")
 	if err != nil {
@@ -33,18 +45,50 @@ func NewHandler(logger *slog.Logger, pingDB func(context.Context) error) (http.H
 	}
 
 	mux := http.NewServeMux()
-	// /{$} はルートURLへの完全一致。未知のURLまで拾わない。
-	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
-		// 描画に失敗した場合、途中のHTMLを送らないよう先にメモリ上で完成させる。
+	// ホームは公開、/booksはDBで有効なセッションを確認できた人だけに表示する。
+	render := func(w http.ResponseWriter, r *http.Request, session *auth.Session) {
 		var body bytes.Buffer
-		if err := pages.ExecuteTemplate(&body, "home.html", nil); err != nil {
-			logger.Error("render_failed", "request_id", w.Header().Get("X-Request-ID"), "error", err.Error())
+		if err := pages.ExecuteTemplate(&body, "home.html", session); err != nil {
+			logger.Error("render_failed", "request_id", w.Header().Get("X-Request-ID"))
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		_, _ = w.Write(body.Bytes())
-	})
+	}
+	page := func(protected bool) http.HandlerFunc {
+		return func(w http.ResponseWriter, r *http.Request) {
+			if !login.CheckHost(r) {
+				http.Error(w, "Bad Request", 400)
+				return
+			}
+			w.Header().Set("Cache-Control", "no-store")
+			session, err := login.Session(r)
+			if errors.Is(err, auth.ErrUnauthenticated) {
+				if protected {
+					http.Redirect(w, r, "/", http.StatusSeeOther)
+				} else {
+					render(w, r, nil)
+				}
+				return
+			}
+			if err != nil {
+				logger.Warn("session_unavailable", "request_id", w.Header().Get("X-Request-ID"))
+				http.Error(w, "Service Unavailable", 503)
+				return
+			}
+			if !protected {
+				http.Redirect(w, r, "/books", http.StatusSeeOther)
+				return
+			}
+			render(w, r, &session)
+		}
+	}
+	mux.HandleFunc("GET /{$}", page(false))
+	mux.HandleFunc("GET /books", page(true))
+	mux.HandleFunc("GET /auth/login", login.Login)
+	mux.HandleFunc("GET /auth/callback", login.Callback)
+	mux.HandleFunc("POST /auth/logout", login.Logout)
 	// /healthz はアプリの稼働確認、/readyz はDBへの接続確認。
 	// DBだけが止まった場合と、アプリ自体が止まった場合を切り分ける。
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
@@ -66,7 +110,16 @@ func NewHandler(logger *slog.Logger, pingDB func(context.Context) error) (http.H
 		_, _ = w.Write([]byte("{\"status\":\"ok\"}\n"))
 	})
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServerFS(static)))
-	return requestLog(logger, mux), nil
+	return requestLog(logger, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// 認証コードがURLに含まれるコールバックでも、外部へRefererを送らない。
+		w.Header().Set("Referrer-Policy", "same-origin")
+		if strings.HasPrefix(r.URL.Path, "/auth/") {
+			w.Header().Set("Referrer-Policy", "no-referrer")
+		}
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.Header().Set("Content-Security-Policy", "default-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'")
+		mux.ServeHTTP(w, r)
+	})), nil
 }
 
 // requestLog は各リクエストにIDを付け、処理後のステータスと所要時間を記録する。

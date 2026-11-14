@@ -1,6 +1,6 @@
 # 開発環境とインストール対象
 
-確認日：2026-11-12（日本時間）。このワークスペースから利用するWSL2 / Linux x86_64環境についての確認。Windows側のすべてのインストール状況を調査した結果ではない。
+確認日：2026-11-14（日本時間）。このワークスペースから利用するWSL2 / Linux x86_64環境についての確認。Windows側のすべてのインストール状況を調査した結果ではない。
 
 ステップ1でGo 1.27.4をプロジェクト内の `.tools/go` へ配置済み。システム全体のPATHは変更せず、`bash scripts/go.sh` から実行する。公式配布一覧のSHA256とダウンロードしたSDKの一致を確認した。
 
@@ -30,7 +30,7 @@ Gitは個人開発に合わせ、まずmainブランチで作業単位のコミ�
 - Go SDK：ビルド、`go test`、`go vet`、`gofmt`に使用する。Go Modulesで依存ライブラリを取得し、`go.mod` / `go.sum`を管理する。
 - Docker / Compose：PostgreSQL、Keycloak、アプリのコンテナを起動する。
 - Git：コード、設計判断、検証記録を管理する。
-- Python 3：`scripts/setup-local.sh` でランダムなパスワードを含むローカル設定を生成する。アプリ本体の実行には不要。
+- Python 3：`scripts/setup-local.sh` で設定生成、`scripts/verify-login.py` で実ログインを検証する。アプリ本体の実行には不要。
 
 2026-11-11にGo公式配布一覧で1.27.4を確認し、Linux amd64版をダウンロードしてチェックサムを照合した。バージョンは `.go-version` に記録。SDKとキャッシュは `.gitignore` で除外している。別環境ではこのバージョンのGoを公式手順で用意すれば、同じ実行補助スクリプトを使用できる。
 
@@ -53,7 +53,7 @@ Keycloakはローカル開発用のモードを使い、公開ポートをルー
 4. GoアプリがDBとOIDC issuerへ接続できる。
 5. ブラウザーからログインしてコールバックへ戻れる。
 
-Goの起動・テスト・ビルド、HTTP応答、PostgreSQL接続・マイグレーション・永続化まで確認済み。Keycloakとの認証連携は次のステップで行う。[ステップ2の結果](../verification/02-postgresql.md)
+Goの起動・テスト・ビルド、HTTP応答、PostgreSQL接続・マイグレーション・永続化まで確認済み。Keycloak 26.8.2との認証連携も確認済み。[ステップ2の結果](../verification/02-postgresql.md)
 
 ## 公式資料
 
@@ -61,3 +61,18 @@ Goの起動・テスト・ビルド、HTTP応答、PostgreSQL接続・マイグ�
 - [Goのリリース履歴](https://go.dev/doc/devel/release)
 - [Keycloak Dockerクイックスタート](https://www.keycloak.org/getting-started/getting-started-docker)
 - [Docker DesktopとWSL](https://docs.docker.com/desktop/features/wsl/)
+
+## 任意のブラウザー検証環境
+
+2026-11-14、Windows画面操作ツールが利用できなかったため、Linux用Playwright 1.65.2とChromium Headless Shellをプロジェクト内の `.tools/browser` / `.cache/playwright` に用意した。不足するlibnspr4・libnss3・libasound2t64と日本語フォントも `.tools/browser-libs` に展開した。OS全体のパッケージは変更していない。これらはGit管理対象外で、アプリ起動には不要。
+
+この作業環境での再実行：
+
+```bash
+FONTCONFIG_FILE="$PWD/.tools/browser-fonts.conf" \
+LD_LIBRARY_PATH="$PWD/.tools/browser-libs/usr/lib/x86_64-linux-gnu" \
+PLAYWRIGHT_BROWSERS_PATH=.cache/playwright \
+.tools/browser/bin/python scripts/verify-browser.py
+```
+
+別環境ではPlaywrightとChromium、日本語フォントを用意して `python scripts/verify-browser.py` を実行する。必須のGo・HTTP検証はブラウザー追加なしで行える。

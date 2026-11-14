@@ -9,3 +9,6 @@
 .terraform/
 *.tfplan
 coverage.out
+
+__pycache__/
+*.pyc

@@ -10,6 +10,8 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"readinglog/internal/auth"
 )
 
 // TestRoutes は各URLの応答と、それに対応するログを確認する。
@@ -26,10 +28,11 @@ func TestRoutes(t *testing.T) {
 		{http.MethodGet, "/static/app.css", http.StatusOK, "body"},
 		{http.MethodGet, "/missing", http.StatusNotFound, "404"},
 		{http.MethodPost, "/healthz", http.StatusMethodNotAllowed, "Method Not Allowed"},
+		{http.MethodGet, "/auth/logout", http.StatusMethodNotAllowed, "Method Not Allowed"},
 	} {
 		t.Run(tc.method+" "+tc.path, func(t *testing.T) {
 			var logs bytes.Buffer
-			h, err := NewHandler(slog.New(slog.NewJSONHandler(&logs, nil)), func(context.Context) error { return nil })
+			h, err := NewHandler(slog.New(slog.NewJSONHandler(&logs, nil)), func(context.Context) error { return nil }, guestAuth{})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -59,7 +62,7 @@ func TestRoutes(t *testing.T) {
 // TestRequestLogExcludesCredentials は、ダミーの認証情報がログに残らないことを確認する。
 func TestRequestLogExcludesCredentials(t *testing.T) {
 	var logs bytes.Buffer
-	h, err := NewHandler(slog.New(slog.NewJSONHandler(&logs, nil)), func(context.Context) error { return nil })
+	h, err := NewHandler(slog.New(slog.NewJSONHandler(&logs, nil)), func(context.Context) error { return nil }, guestAuth{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -81,7 +84,7 @@ func TestReadinessFailureDoesNotExposeDBError(t *testing.T) {
 			t.Error("readiness has no timeout")
 		}
 		return errors.New("private-database-password")
-	})
+	}, guestAuth{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -97,5 +100,68 @@ func TestReadinessFailureDoesNotExposeDBError(t *testing.T) {
 	h.ServeHTTP(live, httptest.NewRequest(http.MethodGet, "/healthz", nil))
 	if live.Code != http.StatusOK {
 		t.Fatalf("liveness = %d", live.Code)
+	}
+}
+
+// 画面テストでは未ログインの利用者を再現する。
+type guestAuth struct{}
+
+func (guestAuth) Login(w http.ResponseWriter, r *http.Request)    {}
+func (guestAuth) Callback(w http.ResponseWriter, r *http.Request) {}
+func (guestAuth) Logout(w http.ResponseWriter, r *http.Request)   {}
+func (guestAuth) Session(r *http.Request) (auth.Session, error) {
+	return auth.Session{}, auth.ErrUnauthenticated
+}
+func (guestAuth) CheckHost(r *http.Request) bool { return true }
+
+func TestBooksRequiresLogin(t *testing.T) {
+	var logs bytes.Buffer
+	h, err := NewHandler(slog.New(slog.NewJSONHandler(&logs, nil)), func(context.Context) error { return nil }, guestAuth{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, httptest.NewRequest("GET", "/books", nil))
+	if w.Code != http.StatusSeeOther || w.Header().Get("Location") != "/" {
+		t.Fatal("guest accessed books")
+	}
+	if w.Header().Get("Cache-Control") != "no-store" {
+		t.Fatal("page may be cached")
+	}
+}
+
+type signedInAuth struct{ guestAuth }
+
+func (signedInAuth) Session(r *http.Request) (auth.Session, error) {
+	return auth.Session{UserID: 1, Name: "<script>alert(1)</script>", CSRFToken: "form-token"}, nil
+}
+
+func TestAuthenticatedPageEscapesName(t *testing.T) {
+	var logs bytes.Buffer
+	h, err := NewHandler(slog.New(slog.NewJSONHandler(&logs, nil)), func(context.Context) error { return nil }, signedInAuth{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, httptest.NewRequest("GET", "/books", nil))
+	body := w.Body.String()
+	if w.Code != 200 || strings.Contains(body, "<script>") || !strings.Contains(body, "&lt;script&gt;") || !strings.Contains(body, "form-token") {
+		t.Fatal("unsafe or incomplete authenticated page")
+	}
+	if w.Header().Get("Referrer-Policy") != "same-origin" || w.Header().Get("Content-Security-Policy") == "" {
+		t.Fatal("missing security headers")
+	}
+}
+
+func TestCallbackDoesNotSendReferrer(t *testing.T) {
+	var logs bytes.Buffer
+	h, err := NewHandler(slog.New(slog.NewJSONHandler(&logs, nil)), func(context.Context) error { return nil }, guestAuth{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, httptest.NewRequest("GET", "/auth/callback?code=secret", nil))
+	if w.Header().Get("Referrer-Policy") != "no-referrer" {
+		t.Fatal("callback could send authorization code in Referer")
 	}
 }

@@ -1,0 +1,76 @@
+{
+  "realm": "reading-log",
+  "enabled": true,
+  "displayName": "読書ノート",
+  "registrationAllowed": false,
+  "resetPasswordAllowed": false,
+  "rememberMe": false,
+  "bruteForceProtected": true,
+  "failureFactor": 5,
+  "internationalizationEnabled": true,
+  "supportedLocales": [
+    "ja",
+    "en"
+  ],
+  "defaultLocale": "ja",
+  "clients": [
+    {
+      "clientId": "reading-log",
+      "name": "読書ノート",
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "${OIDC_CLIENT_SECRET}",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "implicitFlowEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "${APP_BASE_URL}/auth/callback"
+      ],
+      "webOrigins": [
+        "${APP_BASE_URL}"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      },
+      "defaultClientScopes": [
+        "profile",
+        "email"
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "alice",
+      "enabled": true,
+      "email": "alice@example.test",
+      "emailVerified": true,
+      "firstName": "Alice",
+      "lastName": "Reader",
+      "requiredActions": [],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "${LOCAL_USER_PASSWORD}",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "bob",
+      "enabled": true,
+      "email": "bob@example.test",
+      "emailVerified": true,
+      "firstName": "Bob",
+      "lastName": "Reader",
+      "requiredActions": [],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "${LOCAL_USER_PASSWORD}",
+          "temporary": false
+        }
+      ]
+    }
+  ]
+}

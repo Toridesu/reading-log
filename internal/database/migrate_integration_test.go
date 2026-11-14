@@ -57,7 +57,7 @@ func TestMigrationsIntegration(t *testing.T) {
 		t.Fatal(err)
 	}
 	first, err := provider.Up(ctx)
-	if err != nil || len(first) != 1 {
+	if err != nil || len(first) != 2 {
 		t.Fatalf("first migration: %v, error: %v", first, err)
 	}
 	second, err := provider.Up(ctx)

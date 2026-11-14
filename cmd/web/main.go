@@ -13,6 +13,7 @@ import (
 	"syscall"
 	"time"
 
+	"readinglog/internal/auth"
 	"readinglog/internal/database"
 	"readinglog/internal/web"
 )
@@ -42,7 +43,15 @@ func run(logger *slog.Logger) error {
 	defer db.Close()
 	logger.Info("database_connected")
 
-	handler, err := web.NewHandler(logger, db.PingContext)
+	// 認証サービスの設定と公開鍵の取得先を確認してからHTTP受付を始める。
+	oidcCtx, cancelOIDC := context.WithTimeout(context.Background(), 10*time.Second)
+	login, err := auth.New(oidcCtx, auth.FromEnv(), auth.PostgresStore{DB: db}, logger)
+	cancelOIDC()
+	if err != nil {
+		return err
+	}
+	logger.Info("oidc_connected")
+	handler, err := web.NewHandler(logger, db.PingContext, login)
 	if err != nil {
 		return fmt.Errorf("prepare HTTP handler: %w", err)
 	}

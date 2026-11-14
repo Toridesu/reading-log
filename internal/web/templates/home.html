@@ -14,8 +14,21 @@
           <path d="M16 8v20" stroke="currentColor" stroke-width="1.5" />
         </svg>
         <h1>読書ノート</h1>
+        {{if .}}
+        <div class="account">
+          <span>{{.Name}}</span>
+          <form method="post" action="/auth/logout">
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+            <button type="submit">ログアウト</button>
+          </form>
+        </div>
+        {{end}}
       </header>
+      {{if .}}
       <div class="page-lines" aria-hidden="true"></div>
+      {{else}}
+      <div class="welcome"><a class="login-button" href="/auth/login">ログイン</a></div>
+      {{end}}
     </main>
   </body>
 </html>
