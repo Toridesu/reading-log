@@ -6,12 +6,16 @@ import (
 	"net"
 	"net/url"
 	"os"
+	"strconv"
 )
 
-type Config struct{ BaseURL, Issuer, ClientID, ClientSecret string }
+type Config struct {
+	BaseURL, Issuer, ClientID, ClientSecret string
+	LocalAddress                            string
+}
 
 func FromEnv() Config {
-	return Config{os.Getenv("APP_BASE_URL"), os.Getenv("OIDC_ISSUER"), os.Getenv("OIDC_CLIENT_ID"), os.Getenv("OIDC_CLIENT_SECRET")}
+	return Config{BaseURL: os.Getenv("APP_BASE_URL"), Issuer: os.Getenv("OIDC_ISSUER"), ClientID: os.Getenv("OIDC_CLIENT_ID"), ClientSecret: os.Getenv("OIDC_CLIENT_SECRET"), LocalAddress: os.Getenv("OIDC_LOCAL_ADDRESS")}
 }
 
 func (c Config) validate() error {
@@ -22,8 +26,18 @@ func (c Config) validate() error {
 	if err != nil || base.Path != "" {
 		return errors.New("APP_BASE_URL must be an origin, without a path or trailing slash")
 	}
-	if _, err := checkedURL(c.Issuer); err != nil {
+	issuer, err := checkedURL(c.Issuer)
+	if err != nil {
 		return errors.New("OIDC_ISSUER must be HTTPS, or HTTP on localhost")
+	}
+	if c.LocalAddress != "" {
+		// 接続先の置換はローカルHTTP開発だけ。AWSなどのHTTPS構成では起動エラーにする。
+		host, port, err := net.SplitHostPort(c.LocalAddress)
+		number, portErr := strconv.Atoi(port)
+		ip := net.ParseIP(host)
+		if base.Scheme != "http" || issuer.Scheme != "http" || err != nil || portErr != nil || number < 1 || number > 65535 || (host != "keycloak" && (ip == nil || !ip.IsLoopback())) {
+			return errors.New("OIDC_LOCAL_ADDRESS requires local HTTP URLs and keycloak or a loopback IP with a valid port")
+		}
 	}
 	return nil
 }

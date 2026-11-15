@@ -35,7 +35,7 @@ func New(ctx context.Context, cfg Config, store Store, logger *slog.Logger) (*Se
 	if err := cfg.validate(); err != nil {
 		return nil, err
 	}
-	client := &http.Client{Timeout: 5 * time.Second}
+	client := oidcClient(cfg)
 	ctx = oidc.ClientContext(ctx, client)
 	provider, err := oidc.NewProvider(ctx, cfg.Issuer)
 	if err != nil {

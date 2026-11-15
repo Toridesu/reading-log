@@ -15,7 +15,7 @@ bash scripts/dev.sh run -buildvcs=false ./cmd/web
 
 [Keycloak管理画面](http://localhost:8081/admin/)の管理者は `admin`、パスワードは `.env` の `KEYCLOAK_ADMIN_PASSWORD`。realmの切り替え先は `reading-log`。Usersに2ユーザー、Clientsに同名のアプリ用クライアントがある。
 
-ブラウザーは必ず `localhost` で開く。GoもKeycloakも同じissuer `http://localhost:8081/realms/reading-log` を参照する。GoはWSL上で直接実行し、KeycloakはComposeからlocalhostへ公開する構成。アプリをコンテナ化するときは、この通信経路を再設計する。
+ブラウザーは必ず `localhost` で開く。GoもKeycloakも同じissuer `http://localhost:8081/realms/reading-log` を参照する。この手順ではGoをWSL上で直接実行し、KeycloakをComposeからlocalhostへ公開する。[コンテナでGoを動かす場合](local-container.md)は、issuerを保ったままTCPの接続先をKeycloakサービスへ向ける。
 
 ## どのファイルを見ればよいか
 

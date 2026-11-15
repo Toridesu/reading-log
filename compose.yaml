@@ -1,4 +1,4 @@
-# ローカル開発用のPostgreSQLを起動する設定。docker compose up で読み込まれる。
+# ローカルのDB・認証を起動する設定。appプロファイルでGoもコンテナとして動かせる。
 name: reading-log
 
 services:
@@ -47,6 +47,58 @@ services:
       timeout: 5s
       retries: 30
       start_period: 30s
+
+  web:
+    profiles: ["app"]
+    image: readinglog:local
+    build:
+      context: .
+      target: web
+    environment:
+      APP_ADDR: 0.0.0.0:8000
+      APP_BASE_URL: ${APP_BASE_URL:-http://localhost:8080}
+      DATABASE_URL: postgres://readinglog:${APP_DB_PASSWORD:?Run scripts/setup-local.sh first}@db:5432/readinglog?sslmode=disable
+      OIDC_ISSUER: ${OIDC_ISSUER:-http://localhost:8081/realms/reading-log}
+      OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-reading-log}
+      OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:?Run scripts/setup-local.sh first}
+      # ブラウザーから見たissuerは変えず、コンテナ間の接続先だけを指定する。
+      OIDC_LOCAL_ADDRESS: keycloak:8080
+    ports:
+      - "127.0.0.1:8080:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+    read_only: true
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 256m
+    pids_limit: 64
+    stop_grace_period: 15s
+    healthcheck:
+      test: ["CMD", "/app/healthcheck"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+  migrate:
+    profiles: ["app"]
+    image: readinglog-migrate:local
+    build:
+      context: .
+      target: migrate
+    environment:
+      DATABASE_URL: postgres://readinglog:${APP_DB_PASSWORD:?Run scripts/setup-local.sh first}@db:5432/readinglog?sslmode=disable
+    depends_on:
+      db:
+        condition: service_healthy
+    read_only: true
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 256m
+    pids_limit: 64
 
 volumes:
   keycloak_data:

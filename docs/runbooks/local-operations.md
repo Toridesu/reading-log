@@ -108,7 +108,7 @@ Keycloakは既存のものを使う。バックアップはアプリDBだけで�
 
 ## 自動で一連の演習を行う
 
-Goアプリを停止してから実行する。DBとKeycloakは起動済み、アプリURLは `http://localhost:8080` のローカル設定を前提とする。
+Goアプリを停止してから実行する。Webコンテナを使っている場合も `docker compose --profile app stop web` で停止しておく。DBとKeycloakは起動済み、アプリURLは `http://localhost:8080` のローカル設定を前提とする。
 
 ```bash
 docker compose up -d --wait db keycloak

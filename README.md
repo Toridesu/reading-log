@@ -4,7 +4,7 @@ AWSの設計・構築・運用、CI/CD、脅威検知・対応を学ぶための
 
 リポジトリ：[Toridesu/reading-log](https://github.com/Toridesu/reading-log)。進捗は [TODO.md](TODO.md) で管理する。
 
-現在はステップ5まで完了。Keycloak経由のログイン・ログアウトと、自分の読書タスクの作成・一覧・編集・削除が動く。DB停止からの復旧と、バックアップを別DBへ戻して操作する検証も完了した。次はAWS用のコンテナ・Terraform定義を用意する。当面はAWSリソースを作成しない。
+現在はステップ5まで完了。Keycloak経由のログイン・ログアウトと、自分の読書タスクの作成・一覧・編集・削除が動く。DB停止からの復旧と、バックアップを別DBへ戻して操作する検証も完了した。ステップ6はコンテナ化まで完了し、次はTerraform定義を用意する。当面はAWSリソースを作成しない。
 
 ## 起動
 
@@ -26,6 +26,19 @@ bash scripts/dev.sh run -buildvcs=false ./cmd/web
 初回のスクリプトはランダムなDBパスワードを含む `.env` を作る。既存の値を保持して足りない設定だけ追加し、Gitにも含めない。`scripts/dev.sh` はこのファイルを読み込んでGoを実行する。
 
 Go 1.27.4は、この環境では `.tools/go` に配置済み。`scripts/go.sh` はこのSDKを優先し、なければPATH上のGoを使う。別環境では [.go-version](.go-version) に記載したGoを[公式手順](https://go.dev/doc/install)で用意する。SDKとキャッシュはGit管理対象外。
+
+## コンテナで起動する
+
+WSLで動かしているGoを止めてから実行する。同じDBとKeycloakを使用する。
+
+```bash
+docker compose up -d --wait db keycloak
+docker compose --profile app build web migrate
+docker compose --profile app run --rm migrate up
+docker compose --profile app up -d --wait web
+```
+
+URLは同じ [localhost:8080](http://localhost:8080)。ログは `docker compose --profile app logs --tail 50 web`、停止は `docker compose --profile app stop web`。[構成・認証の通信経路・再作成手順](docs/runbooks/local-container.md)を参照。
 
 ## 確認
 
@@ -51,7 +64,7 @@ python3 scripts/verify-login.py
 
 ## バックアップと復元
 
-Goアプリを停止し、DBとKeycloakを起動した状態で、一連の運用演習を再実行できる。DBを一時停止・再開し、復元用DBは最後に削除する。
+GoアプリとWebコンテナを停止し、DBとKeycloakを起動した状態で、一連の運用演習を再実行できる。DBを一時停止・再開し、復元用DBは最後に削除する。
 
 ```bash
 bash scripts/go.sh build -o bin/readinglog ./cmd/web
@@ -86,12 +99,15 @@ python3 scripts/verify-operations.py
 ```text
 cmd/web/                 アプリの起動・設定・正常終了
 cmd/migrate/             テーブル変更の適用・状態確認
+cmd/healthcheck/         コンテナ内でGoの稼働を確認するコマンド
 internal/web/            HTTPルート、ログ、画面、テスト
 internal/database/       DB接続とマイグレーション、DBテスト
 internal/auth/           OIDC、DBセッション、Cookie、認証テスト
 internal/books/          読書タスクの項目、入力検証、所有者を条件にしたSQL
 migrations/              テーブル定義のSQL
-compose.yaml             ローカルのPostgreSQLとKeycloak
+Dockerfile               Web用・DB変更用イメージのビルド
+.dockerignore            ビルドへ渡すファイルの制限
+compose.yaml             DB・Keycloak、appプロファイルのWebとmigrate
 docker/postgres/         初回のDBユーザー・テスト用DB作成
 docker/keycloak/         ローカル認証用realm・クライアント・2ユーザー
 scripts/                 設定生成、Go実行補助、検証、DBバックアップ・復元
@@ -114,5 +130,7 @@ TODO.md                  作業順と進捗
 - [ステップ4の検証結果](docs/verification/04-reading-tasks.md)
 - [障害調査・バックアップ・復元手順](docs/runbooks/local-operations.md)
 - [ステップ5の検証結果](docs/verification/05-local-operations.md)
+- [コンテナの起動・通信・調査手順](docs/runbooks/local-container.md)
+- [ステップ6Aの検証結果](docs/verification/06-container.md)
 
 UIは不要なセカンダリラベルや説明を避け、レイアウトで伝える。

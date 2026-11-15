@@ -9,7 +9,7 @@
 | 対象 | 確認結果 | 今後の扱い |
 | --- | --- | --- |
 | Git | 2.53.0。mainブランチで初期化・初回コミット済み | mainをorigin/mainへpush済み。作業単位でコミット・pushする |
-| Docker CLI / Engine | 29.9.2。サーバーバージョンの取得成功 | PostgreSQLイメージ取得・コンテナ起動・再作成を確認済み。アプリイメージのビルドは後続 |
+| Docker CLI / Engine | 29.9.2。サーバーバージョンの取得成功 | PostgreSQLイメージ取得・コンテナ起動・再作成を確認済み。ステップ6AでWeb・マイグレーションイメージのビルドも確認済み |
 | Docker Compose | v5.6.1 | そのまま使用 |
 | Go | `.tools/go` に1.27.4を配置済み | `bash scripts/go.sh` で使用 |
 | Python 3 | このWSLで利用可能 | ローカル設定の生成に使用 |

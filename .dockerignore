@@ -1,0 +1,12 @@
+# 必要なソースだけをビルドへ送る。.env・Git・SDK・バックアップ・ログは送らない。
+**
+!Dockerfile
+!.dockerignore
+!go.mod
+!go.sum
+!cmd/
+!cmd/**
+!internal/
+!internal/**
+!migrations/
+!migrations/**

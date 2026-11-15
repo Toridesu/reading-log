@@ -87,11 +87,16 @@ type authFixture struct {
 	idp                    *httptest.Server
 	key                    *rsa.PrivateKey
 	nonce, challenge, mode string
+	issuer                 string
 	override               map[string]any
 	exchanges              int
 }
 
 func fixture(t *testing.T) *authFixture {
+	return localFixture(t, false)
+}
+
+func localFixture(t *testing.T, mapped bool) *authFixture {
 	t.Helper()
 	key, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
@@ -101,8 +106,15 @@ func fixture(t *testing.T) *authFixture {
 	mux := http.NewServeMux()
 	f.idp = httptest.NewServer(mux)
 	t.Cleanup(f.idp.Close)
+	f.issuer = f.idp.URL
+	localAddress := ""
+	if mapped {
+		f.issuer = "http://localhost:1"
+		u, _ := url.Parse(f.idp.URL)
+		localAddress = u.Host
+	}
 	mux.HandleFunc("GET /.well-known/openid-configuration", func(w http.ResponseWriter, r *http.Request) {
-		_ = json.NewEncoder(w).Encode(map[string]any{"issuer": f.idp.URL, "authorization_endpoint": f.idp.URL + "/authorize", "token_endpoint": f.idp.URL + "/token", "jwks_uri": f.idp.URL + "/jwks", "id_token_signing_alg_values_supported": []string{"RS256"}})
+		_ = json.NewEncoder(w).Encode(map[string]any{"issuer": f.issuer, "authorization_endpoint": f.issuer + "/authorize", "token_endpoint": f.issuer + "/token", "jwks_uri": f.issuer + "/jwks", "id_token_signing_alg_values_supported": []string{"RS256"}})
 	})
 	mux.HandleFunc("GET /jwks", func(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode(map[string]any{"keys": []map[string]string{{"kty": "RSA", "kid": "test", "use": "sig", "alg": "RS256", "n": base64.RawURLEncoding.EncodeToString(key.PublicKey.N.Bytes()), "e": "AQAB"}}})
@@ -122,7 +134,7 @@ func fixture(t *testing.T) *authFixture {
 			_, _ = w.Write([]byte(`{"error":"invalid_grant","error_description":"private-id-token"}`))
 			return
 		}
-		claims := map[string]any{"iss": f.idp.URL, "sub": "user-a", "aud": "reading-log", "azp": "reading-log", "iat": time.Now().Unix(), "exp": time.Now().Add(time.Hour).Unix(), "nonce": f.nonce, "preferred_username": "alice"}
+		claims := map[string]any{"iss": f.issuer, "sub": "user-a", "aud": "reading-log", "azp": "reading-log", "iat": time.Now().Unix(), "exp": time.Now().Add(time.Hour).Unix(), "nonce": f.nonce, "preferred_username": "alice"}
 		for k, v := range f.override {
 			claims[k] = v
 		}
@@ -132,7 +144,7 @@ func fixture(t *testing.T) *authFixture {
 		}
 		_ = json.NewEncoder(w).Encode(result)
 	})
-	f.service, err = New(context.Background(), Config{"http://localhost:8080", f.idp.URL, "reading-log", "test-client-secret"}, f.store, slog.New(slog.NewJSONHandler(&f.logs, nil)))
+	f.service, err = New(context.Background(), Config{BaseURL: "http://localhost:8080", Issuer: f.issuer, ClientID: "reading-log", ClientSecret: "test-client-secret", LocalAddress: localAddress}, f.store, slog.New(slog.NewJSONHandler(&f.logs, nil)))
 	if err != nil {
 		t.Fatal(err)
 	}
