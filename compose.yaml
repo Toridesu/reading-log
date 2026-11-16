@@ -57,6 +57,7 @@ services:
     environment:
       APP_ADDR: 0.0.0.0:8000
       APP_BASE_URL: ${APP_BASE_URL:-http://localhost:8080}
+      DATABASE_REQUIRE_TLS: "false"
       DATABASE_URL: postgres://readinglog:${APP_DB_PASSWORD:?Run scripts/setup-local.sh first}@db:5432/readinglog?sslmode=disable
       OIDC_ISSUER: ${OIDC_ISSUER:-http://localhost:8081/realms/reading-log}
       OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-reading-log}
@@ -90,6 +91,7 @@ services:
       context: .
       target: migrate
     environment:
+      DATABASE_REQUIRE_TLS: "false"
       DATABASE_URL: postgres://readinglog:${APP_DB_PASSWORD:?Run scripts/setup-local.sh first}@db:5432/readinglog?sslmode=disable
     depends_on:
       db:

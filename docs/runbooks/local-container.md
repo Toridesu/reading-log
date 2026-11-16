@@ -20,13 +20,15 @@ docker compose --profile app up -d --wait web
 
 `build`はGoのソースから実行用イメージを作る。`migrate up`はDBのテーブル変更、`up ... web`はWebの起動。Webの起動だけでマイグレーションを自動実行しない。適用済みなら `applied 0 migration(s)` になる。
 
+DB接続は標準でTLS検証を要求するが、このローカルComposeだけ `DATABASE_REQUIRE_TLS=false` と `sslmode=disable` を指定する。AWS向けの接続方法は[DB TLS手順](database-tls.md)を参照。
+
 `app`はComposeのプロファイル名。Webとmigrateを使いたいときに指定する。従来の「DBとKeycloakをCompose、GoをWSLで実行」も選べる。
 
 ## 追加したファイルと役割
 
 | ファイル | 役割 |
 | --- | --- |
-| `Dockerfile` | Goをビルドし、Web用とDB変更用のイメージを作る |
+| `Dockerfile` | Goをビルドし、Web用とDB変更用のイメージを作る。RDS CAのハッシュを確認して同梱 |
 | `.dockerignore` | ビルドに渡すファイルをソース・依存定義に限定する |
 | `compose.yaml` のweb / migrate | ローカルの接続先、起動順、ポート、実行制限 |
 | `cmd/healthcheck/main.go` | curlやシェルを入れずに `/healthz` を確認する小さな実行ファイル |

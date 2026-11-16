@@ -17,6 +17,7 @@ app_password = values.get('APP_DB_PASSWORD', secrets.token_hex(24))
 defaults = {
     'APP_ADDR': '127.0.0.1:8080',
     'DB_PORT': '5432',
+    'DATABASE_REQUIRE_TLS': 'false',
     'POSTGRES_PASSWORD': secrets.token_hex(24),
     'APP_DB_PASSWORD': app_password,
     'DATABASE_URL': f'postgres://readinglog:{app_password}@127.0.0.1:5432/readinglog?sslmode=disable',

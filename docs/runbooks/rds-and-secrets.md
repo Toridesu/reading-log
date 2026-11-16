@@ -6,7 +6,7 @@
 採用理由：DBを公開せず、アプリへ管理者権限を渡さずに、再構築と復元を学べる構成にする。
 完了条件：Terraform定義の構文・mockテストが通り、接続準備と復元・削除の手順を説明できる。
 
-今回はAWS定義の追加まで。実AWSへのplan/apply、RDS起動、Secretの値の投入、復元演習は行っていない。アプリユーザーの初期化とクライアント側TLSは次の実装で接続する。
+今回はAWS定義の追加まで。実AWSへのplan/apply、RDS起動、Secretの値の投入、復元演習は行っていない。クライアントTLS・CA同梱は[ステップ6E](database-tls.md)で実装/ローカル検証済み。アプリユーザー初期化とSecret値投入は後続。
 
 ## 作ったもの
 
@@ -73,7 +73,7 @@ RDSには `manage_master_user_password = true` を指定し、Terraformの `pass
 
 ## 次に実装する接続準備
 
-1. RDSの公式CAバンドルを検証して、Web・migrateイメージへ含める。
+1. RDSの公式CAバンドルを検証して、Web・migrateイメージへ含める（ステップ6Eで完了）。
 2. プライベート側で実行する初期化処理を用意する。管理者Secretを読む権限はこの処理だけへ与え、アプリユーザーと対象スキーマの権限を作る。
 3. URLのユーザー名・パスワードを適切にエンコードし、アプリ用Secretへ接続URLの文字列全体を保存する。値をコマンド引数・ログ・Gitへ出さない。
 4. ECSタスク定義の `secrets` で、このSecretの全文を `DATABASE_URL` に注入する。
@@ -85,7 +85,7 @@ RDSには `manage_master_user_password = true` を指定し、Terraformの `pass
 postgres://readinglog:<URLエンコード済みパスワード>@<RDSエンドポイント>:5432/readinglog?sslmode=verify-full&sslrootcert=/app/certs/ap-northeast-1-bundle.pem
 ```
 
-このCAファイルの配置はまだ行っていない。現在のDockerfileの一般的なCA証明書だけでRDSへの検証付き接続ができるとは扱わない。Secretに値がないままでは、将来のECSタスクは起動できない。[AWS：RDSのCA](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/UsingWithRDS.SSL.html)
+このCAは現在のWeb/migrateイメージに同梱済み。Goは `DATABASE_REQUIRE_TLS` が未設定またはtrueなら証明書・ホスト名検証を要求する。実RDSへの接続確認は後日行う。Secretに値がないままでは、将来のECSタスクは起動できない。[AWS：RDSのCA](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/UsingWithRDS.SSL.html)
 
 Secretの更新だけでは、すでに起動したタスクの環境変数は変わらない。アプリDBパスワードの変更はDB側・Secret側・タスクの再起動を一組として扱う。管理者用のRDS自動ローテーションがアプリユーザーまで更新するわけではない。[AWS：ECSへのSecret注入](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/secrets-envvar-secrets-manager.html)
 

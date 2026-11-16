@@ -7,6 +7,8 @@ RUN --mount=type=cache,target=/go/pkg/mod go mod download
 COPY cmd/ ./cmd/
 COPY internal/ ./internal/
 COPY migrations/ ./migrations/
+COPY certs/ap-northeast-1-bundle.pem certs/SHA256SUMS ./certs/
+RUN cd certs && sha256sum -c SHA256SUMS
 ARG TARGETOS
 ARG TARGETARCH
 RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
@@ -16,6 +18,7 @@ RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache
 
 FROM scratch AS runtime
 COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+COPY --from=build /src/certs/ap-northeast-1-bundle.pem /app/certs/ap-northeast-1-bundle.pem
 WORKDIR /app
 USER 65532:65532
 

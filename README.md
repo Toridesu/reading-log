@@ -4,7 +4,7 @@ AWSの設計・構築・運用、CI/CD、脅威検知・対応を学ぶための
 
 リポジトリ：[Toridesu/reading-log](https://github.com/Toridesu/reading-log)。進捗は [TODO.md](TODO.md) で管理する。
 
-現在はステップ5まで完了。Keycloak経由のログイン・ログアウトと、自分の読書タスクの作成・一覧・編集・削除が動く。DB停止からの復旧と、バックアップを別DBへ戻して操作する検証も完了した。ステップ6はコンテナ化、Terraformのネットワーク・ECR・ログ・ECSクラスター・IAM・RDS・DB用Secretの定義とmockテストまで完了。次はDBユーザー初期化とRDS向けのクライアントTLSを実装する。当面はAWSリソースを作成しない。
+現在はステップ5まで完了。Keycloak経由のログイン・ログアウトと、自分の読書タスクの作成・一覧・編集・削除が動く。DB停止からの復旧と、バックアップを別DBへ戻して操作する検証も完了した。ステップ6はコンテナ化、Terraformのネットワーク・ECR・ログ・ECSクラスター・IAM・RDS・DB用Secretの定義とmockテストまで完了。Go側のTLS検証とRDS CAの同梱も完了。次はDBユーザー初期化とSecret値の投入処理を実装する。当面はAWSリソースを作成しない。
 
 ## 起動
 
@@ -67,6 +67,9 @@ curl -i http://localhost:8080/readyz
 
 # Keycloakのログイン画面を使う、2ユーザーのHTTP検証
 python3 scripts/verify-login.py
+
+# アプリの起動は不要：専用DBでTLSを検証して片付ける
+python3 scripts/verify-database-tls.py
 ```
 
 `/healthz` はアプリの稼働確認。`/readyz` はDBへ接続できれば200、接続できなければ503を返す。Keycloakの状態は `docker compose ps` で確認する。テーブルが揃っているかはマイグレーションの `status` で確認する。
@@ -95,6 +98,7 @@ python3 scripts/verify-operations.py
 | `POSTGRES_PASSWORD` | DB初期化用の管理者パスワード |
 | `APP_DB_PASSWORD` | アプリ専用DBロールのパスワード |
 | `DATABASE_URL` | アプリとマイグレーションの接続先 |
+| `DATABASE_REQUIRE_TLS` | 未設定時は証明書・ホスト名検証を必須にする。ローカルの `.env` / Composeだけfalse |
 | `TEST_DATABASE_URL` | 統合テスト専用DBの接続先 |
 | `APP_BASE_URL` | ブラウザーから開くURL。初期値は `http://localhost:8080` |
 | `KEYCLOAK_PORT` | Keycloakのホスト側ポート。初期値は8081 |
@@ -116,6 +120,7 @@ internal/database/       DB接続とマイグレーション、DBテスト
 internal/auth/           OIDC、DBセッション、Cookie、認証テスト
 internal/books/          読書タスクの項目、入力検証、所有者を条件にしたSQL
 migrations/              テーブル定義のSQL
+certs/                   東京RDSの公開CA・固定チェックサム
 Dockerfile               Web用・DB変更用イメージのビルド
 .dockerignore            ビルドへ渡すファイルの制限
 compose.yaml             DB・Keycloak、appプロファイルのWebとmigrate
@@ -150,5 +155,7 @@ TODO.md                  作業順と進捗
 - [ステップ6Cの検証結果](docs/verification/08-ecs-foundation.md)
 - [RDS・秘密情報・バックアップ/削除の設計と手順](docs/runbooks/rds-and-secrets.md)
 - [ステップ6Dの検証結果](docs/verification/09-rds-and-secrets.md)
+- [DB接続のTLS・CA・拒否テストの手順](docs/runbooks/database-tls.md)
+- [ステップ6Eの検証結果](docs/verification/10-database-tls.md)
 
 UIは不要なセカンダリラベルや説明を避け、レイアウトで伝える。

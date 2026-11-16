@@ -112,3 +112,7 @@ bash scripts/dev.sh test ./...
 - [PostgreSQL公式コンテナ](https://hub.docker.com/_/postgres)：初期化と、18以降のボリューム配置先 `/var/lib/postgresql`。
 - [pgxのdatabase/sqlドライバー](https://pkg.go.dev/github.com/jackc/pgx/v5/stdlib)
 - [goose Provider](https://pressly.github.io/goose/documentation/provider/)
+
+## TLS設定の追加
+
+GoのDB接続は標準で証明書・ホスト名を検証する。従来のローカルDBを使うときは `bash scripts/setup-local.sh` で `.env` に `DATABASE_REQUIRE_TLS=false` を追加し、`dev.sh` 経由で起動する。AWSではtrueを使う。[TLSの設定と検査手順](database-tls.md)を参照。

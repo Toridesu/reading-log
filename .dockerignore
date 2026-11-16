@@ -10,3 +10,6 @@
 !internal/**
 !migrations/
 !migrations/**
+!certs/
+!certs/ap-northeast-1-bundle.pem
+!certs/SHA256SUMS
