@@ -16,3 +16,9 @@ __pycache__/
 # ローカルDBのバックアップにも個人データが含まれる。
 *.dump
 *.dump.sha256
+
+# 実環境の値とTerraformの障害ログは除外。見本と依存ロックは管理する。
+*.tfvars
+*.tfvars.json
+crash.log
+crash.*.log

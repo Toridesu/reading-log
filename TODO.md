@@ -89,8 +89,8 @@ mainブランチでローカルGit管理を開始。SDK・キャッシュ・秘�
 
 - [x] AWS用のDockerfileを用意する（Web・マイグレーションを分離）
 - [x] ComposeからGoを起動し、認証・CRUD・ログ・正常終了・再作成を確認する
-- [ ] Terraformを導入し、CLI・プロバイダーのバージョンを固定する
-- [ ] VPC・サブネット・SG・NAT・S3 Gateway Endpointを定義する
+- [x] Terraformを導入し、CLI・プロバイダーのバージョンを固定する
+- [x] VPC・サブネット・SG・NAT・S3 Gateway Endpointを定義する（構文・mockテスト済み）
 - [ ] ECR・ECS Fargate・ALB・RDS・CloudWatch Logsを定義する
 - [ ] Cognito・Secrets Manager・用途別IAMロールを定義する
 - [ ] stateのS3保存・ロックと、アプリ環境からの分離を用意する
@@ -155,3 +155,4 @@ mainブランチでローカルGit管理を開始。SDK・キャッシュ・秘�
 - 2026-11-15：ステップ4完了。書名・状態・メモのCRUD、所有者を条件にしたSQL、入力検証・Origin/CSRF・改ざん拒否を追加。Go・実DB・Chromiumで2ユーザーの操作と拒否、PC/スマートフォン幅の画面を確認。次はステップ5の障害調査とバックアップ・復元。[検証結果](docs/verification/04-reading-tasks.md)
 - 2026-11-15：ステップ5完了。DB停止時の200/503・ログ追跡と再起動不要の復旧、認証情報の行を除いたバックアップ、別DBへの復元・全行/所有者/採番の照合、復元先での再ログイン・CRUD・認可を確認。操作スクリプトと構築・片付け手順を追加。次はステップ6のコンテナ・Terraform定義。[検証結果](docs/verification/05-local-operations.md)
 - 2026-11-15：ステップ6A完了。固定GoイメージからWeb・マイグレーション用イメージをビルド。非root・読み取り専用で稼働し、OIDCのissuerを保持したコンテナ間接続、2ユーザーの認証・CRUD、正常終了、Web再作成後のデータ/セッション保持を確認。次はTerraform導入・定義。AWSリソースは未作成。[検証結果](docs/verification/06-container.md)
+- 2026-11-16：ステップ6B完了。Terraform 1.17.2・AWSプロバイダー6.73.0を固定。東京2AZのネットワーク・SG・S3経路を定義し、fmt/validateと8件のmockテストに成功。構成図・通信制限・再実行/片付け手順を記録。実AWSへの操作は行っていない。次はECR・アプリ実行基盤などの定義。[検証結果](docs/verification/07-terraform-network.md)

@@ -13,7 +13,7 @@
 | Docker Compose | v5.6.1 | そのまま使用 |
 | Go | `.tools/go` に1.27.4を配置済み | `bash scripts/go.sh` で使用 |
 | Python 3 | このWSLで利用可能 | ローカル設定の生成に使用 |
-| Terraform | このWSLのPATH上では見つからない | インフラ定義の検証段階で用意 |
+| Terraform | 2026-11-16に `.tools/terraform` へ1.17.2を配置 | `bash scripts/terraform.sh` で使用。AWSプロバイダー6.73.0も固定 |
 | AWS CLI | このWSLのPATH上では見つからない | AWSへ展開する段階で用意 |
 | Node.js / Make | このWSLのPATH上では見つからない | 初期構成では必須にしない |
 
@@ -38,9 +38,14 @@ PostgreSQLとKeycloakはComposeがイメージを取得して動かす。ホス�
 
 Keycloakはローカル開発用のモードを使い、公開ポートをループバックに限定する。開発用の認証情報は本番へ持ち込まない。Goアプリとブラウザーの双方から同じOIDC issuerを参照できるよう、Composeのホスト名・ポート・redirect URIを合わせて設計する。
 
+### Terraform
+
+2026-11-16、公式Linux amd64版のSHA-256を固定値と照合して、Terraform 1.17.2をプロジェクト内へ配置した。システムのPATHは変更していない。AWSプロバイダー6.73.0と `.terraform.lock.hcl` も固定し、ネットワークの構文検証と8件のmockテストが成功。AWS CLI・AWS認証はまだ用意していない。
+
+初回は `bash scripts/setup-terraform.sh`、通常の検査は `bash scripts/check-terraform.sh`。[構成・導入・検査の説明](terraform-network.md)を参照。配布物・キャッシュ・stateはGitへ入れない。
+
 ### 後で用意するもの
 
-- Terraform：ステップ6の `fmt`、`validate`、IaC検査を行う段階に、公式配布のLinux版を導入する。Goと同様にプロジェクト内 `.tools/` に配置する案。CLIバージョンと `required_version` を揃え、プロバイダーは `.terraform.lock.hcl` で固定する。stateはGitへ入れない。
 - セキュリティ検査ツール：フェーズ2で選定し、可能なものはバージョンを固定したコンテナやGoツールとして実行する。
 - AWS CLI：実際のAWS展開・調査を始めるステップ9で、公式のLinux用CLI v2を導入する。認証設定は実展開時に用意し、コードやGitへ認証情報を保存しない。GitHub Actions側のAWS認証はOIDCとして別に設定する。
 - エディターのGo補完：必要に応じてgopls等を導入する。アプリを起動するための必須条件ではない。

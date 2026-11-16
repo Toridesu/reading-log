@@ -1,0 +1,4 @@
+# 現時点はローカル検査のみ。実展開前にAZの利用可否・料金・state管理を確認する。
+name_prefix        = "reading-log-dev"
+vpc_cidr           = "10.20.0.0/16"
+availability_zones = ["ap-northeast-1a", "ap-northeast-1c"]
