@@ -93,7 +93,9 @@ mainブランチでローカルGit管理を開始。SDK・キャッシュ・秘�
 - [x] VPC・サブネット・SG・NAT・S3 Gateway Endpointを定義する（構文・mockテスト済み）
 - [x] Web/migrateのECR・CloudWatch Logsを定義する（構文・mockテスト済み）
 - [x] ECSクラスターと用途別の実行/タスクロールを定義する（イメージ取得・ログ送信まで）
-- [ ] RDS・Cognito・Secrets Managerと、対象Secretの取得権限を定義する
+- [x] RDS・アプリDB用Secrets Managerと、そのSecretだけの取得権限を定義する（構文・mockテスト済み）
+- [ ] RDS向けTLS・CA配置・専用DBユーザー初期化とSecret値の投入処理を用意する
+- [ ] CognitoとOIDC用Secret・取得権限を定義する
 - [ ] ALB・ECS Fargateのタスク定義/サービスを接続する
 - [ ] stateのS3保存・ロックと、アプリ環境からの分離を用意する
 - [ ] TerraformとIaCの検査を行う
@@ -159,3 +161,4 @@ mainブランチでローカルGit管理を開始。SDK・キャッシュ・秘�
 - 2026-11-15：ステップ6A完了。固定GoイメージからWeb・マイグレーション用イメージをビルド。非root・読み取り専用で稼働し、OIDCのissuerを保持したコンテナ間接続、2ユーザーの認証・CRUD、正常終了、Web再作成後のデータ/セッション保持を確認。次はTerraform導入・定義。AWSリソースは未作成。[検証結果](docs/verification/06-container.md)
 - 2026-11-16：ステップ6B完了。Terraform 1.17.2・AWSプロバイダー6.73.0を固定。東京2AZのネットワーク・SG・S3経路を定義し、fmt/validateと8件のmockテストに成功。構成図・通信制限・再実行/片付け手順を記録。実AWSへの操作は行っていない。次はECR・アプリ実行基盤などの定義。[検証結果](docs/verification/07-terraform-network.md)
 - 2026-11-16：ステップ6C完了。Web/migrateのECR・ログ・用途別IAMとFargate用クラスターを定義。対象ARNに限定したpull/ログ送信、信頼条件、保存設定を検査し、既存分を含む12件のmockテストに成功。AWSリソースは未作成。次はRDSとSecrets Managerの定義。[検証結果](docs/verification/08-ecs-foundation.md)
+- 2026-11-16：ステップ6D完了。非公開RDS PostgreSQL 18.6、暗号化・TLS必須・7日バックアップ・削除保護・最終スナップショットとDBログを定義。管理者Secretとアプリ接続情報を分離し、取得権限を限定。既存分を含む18件のmockテストに成功。実AWS・値の投入・復元は未実施。次はDB初期化とクライアントTLS。[検証結果](docs/verification/09-rds-and-secrets.md)

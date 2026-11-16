@@ -1,5 +1,14 @@
 # 実AWSの代わりに架空のアカウント・ARNを使い、IAMの許可範囲を確認する。
 mock_provider "aws" {
+  mock_resource "aws_db_instance" {
+    defaults = {
+      master_user_secret = [{
+        secret_arn    = "arn:aws:secretsmanager:ap-northeast-1:123456789012:secret:rds!db-test-ABCDEF"
+        secret_status = "active"
+        kms_key_id    = "arn:aws:kms:ap-northeast-1:123456789012:key/00000000-0000-0000-0000-000000000001"
+      }]
+    }
+  }
   mock_data "aws_caller_identity" {
     defaults = { account_id = "123456789012" }
   }

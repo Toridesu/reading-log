@@ -6,7 +6,7 @@
 採用理由：アプリが動く前に、何を配り、どこへ記録し、誰に何を許可するかを具体化する。
 完了条件：Terraformの構文検証とmockテストで、保存設定と権限の範囲を確認できる。
 
-今回は定義とローカル検証まで。AWSリソース・イメージのpush・タスクの起動はまだ行っていない。ALB・RDS・Cognito・Secrets Manager、ECSのタスク定義とサービスは後続で追加する。
+今回は定義とローカル検証まで。AWSリソース・イメージのpush・タスクの起動はまだ行っていない。RDS・DB用Secretは[ステップ6D](rds-and-secrets.md)で定義済み。ALB・Cognito・ECSのタスク定義とサービスは後続で追加する。
 
 ## 作ったものとファイル
 
@@ -63,7 +63,7 @@ ECRは同じタグの上書きを禁止する `IMMUTABLE` とする。将来のC
 
 Goは現在、DBへSQLで接続し、OIDCをHTTPSで利用する。どちらも今回の構成ではGoからAWS APIを呼ぶ処理ではないため、タスクロールにAWS APIのAllowを追加しない。DBへの通信はSG・DBユーザーの認証、OIDCは認証プロトコルで制御する。IAMだけでアプリの所有者制限ができるわけではない。[AWS：タスクロール](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-iam-roles.html)
 
-実行ロールの許可は以下の3つ。Secretの取得権限は、Secretを定義して対象ARNが決まった後に加える。
+実行ロールの許可は以下の3つ。ステップ6Dで、これとは別のポリシーとしてアプリDB用Secretだけの取得権限を追加した。
 
 | 用途 | Action | Resource |
 | --- | --- | --- |
@@ -81,7 +81,7 @@ Goは現在、DBへSQLで接続し、OIDCをHTTPSで利用する。どちらも�
 bash scripts/check-terraform.sh
 ```
 
-AWSの認証設定やAWS CLIは不要。従来のネットワーク8件と今回の4件を実行し、`Success! 12 passed, 0 failed.` になれば成功する。`aws_caller_identity` によるアカウントID取得もmockへ置き換え、ローカルではAWS STSを呼ばない。
+AWSの認証設定やAWS CLIは不要。現在はネットワーク8件・この手順の4件・RDS/Secretの6件を実行し、`Success! 18 passed, 0 failed.` になれば成功する。`aws_caller_identity` によるアカウントID取得もmockへ置き換え、ローカルではAWS STSを呼ばない。
 
 権限のテストにはWebとmigrateで異なる架空ARNを渡し、取り違えを検出する。Action一覧・Resource・ポリシーの付与先・信頼条件を検査するが、実IAMの評価エンジンや組織のSCPまで再現するものではない。[実測結果](../verification/08-ecs-foundation.md)
 
@@ -97,6 +97,6 @@ AWSの認証設定やAWS CLIは不要。従来のネットワーク8件と今回
 
 ローカルの検査環境は前回と同じ導入・検査コマンドで再作成できる。SDK・キャッシュの片付けも[ネットワーク手順](terraform-network.md)を参照。今回は実AWSの作成・削除を行わない。
 
-実展開後に環境を消す際は、必要なログとロールバック用イメージを先に退避し、タスク・サービスを止めてから対象のイメージを削除する。ECRの `force_delete = false` により、中身が残ったリポジトリの削除は失敗する。ログは `skip_destroy = false` なので、環境の削除対象に含まれる。削除planで対象を確認し、適用後にECR・ログ・クラスター・ロールの残存を確認する。RDSやstateの保持手順は、それらの実装時に追記する。
+実展開後に環境を消す際は、必要なログとロールバック用イメージを先に退避し、タスク・サービスを止めてから対象のイメージを削除する。ECRの `force_delete = false` により、中身が残ったリポジトリの削除は失敗する。ログは `skip_destroy = false` なので、環境の削除対象に含まれる。削除planで対象を確認し、適用後にECR・ログ・クラスター・ロールの残存を確認する。RDS・Secretの保持/削除は[専用手順](rds-and-secrets.md)を参照。stateの保持手順は後続で追加する。
 
-次はRDSとSecrets Managerの定義・DB接続情報の扱いを具体化し、その後Cognito・ALB・ECSタスク/サービスへ接続する。実展開前の料金見積もりとAWS実機検証は引き続き未実施。
+次はDB初期化・クライアントTLS・Secret値の投入を実装し、その後Cognito・ALB・ECSタスク/サービスへ接続する。実展開前の料金見積もりとAWS実機検証は引き続き未実施。

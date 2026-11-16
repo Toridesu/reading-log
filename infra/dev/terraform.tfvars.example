@@ -2,3 +2,7 @@
 name_prefix        = "reading-log-dev"
 vpc_cidr           = "10.20.0.0/16"
 availability_zones = ["ap-northeast-1a", "ap-northeast-1c"]
+
+# 実AWSの削除前に固有の最終スナップショット名を決め、保護解除を先に適用する。
+db_deletion_protection       = true
+db_final_snapshot_identifier = null

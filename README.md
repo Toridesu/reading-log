@@ -4,7 +4,7 @@ AWSの設計・構築・運用、CI/CD、脅威検知・対応を学ぶための
 
 リポジトリ：[Toridesu/reading-log](https://github.com/Toridesu/reading-log)。進捗は [TODO.md](TODO.md) で管理する。
 
-現在はステップ5まで完了。Keycloak経由のログイン・ログアウトと、自分の読書タスクの作成・一覧・編集・削除が動く。DB停止からの復旧と、バックアップを別DBへ戻して操作する検証も完了した。ステップ6はコンテナ化、Terraformのネットワーク・ECR・ログ・ECSクラスター・用途別IAMの定義とmockテストまで完了。次はRDSとSecrets Managerを追加する。当面はAWSリソースを作成しない。
+現在はステップ5まで完了。Keycloak経由のログイン・ログアウトと、自分の読書タスクの作成・一覧・編集・削除が動く。DB停止からの復旧と、バックアップを別DBへ戻して操作する検証も完了した。ステップ6はコンテナ化、Terraformのネットワーク・ECR・ログ・ECSクラスター・IAM・RDS・DB用Secretの定義とmockテストまで完了。次はDBユーザー初期化とRDS向けのクライアントTLSを実装する。当面はAWSリソースを作成しない。
 
 ## 起動
 
@@ -49,7 +49,7 @@ bash scripts/setup-terraform.sh  # 初回のみ
 bash scripts/check-terraform.sh
 ```
 
-Terraform 1.17.2は `.tools/terraform`、AWSプロバイダーは6.73.0で固定。検査は書式・構文・12件のmockテストで、AWSリソースを作らない。[ネットワーク手順](docs/runbooks/terraform-network.md)と[ECR・ログ・IAMの説明](docs/runbooks/ecs-foundation.md)を参照。
+Terraform 1.17.2は `.tools/terraform`、AWSプロバイダーは6.73.0で固定。検査は書式・構文・18件のmockテストで、AWSリソースを作らない。[ネットワーク手順](docs/runbooks/terraform-network.md)と[ECR・ログ・IAMの説明](docs/runbooks/ecs-foundation.md)、[RDS・Secret・復元の手順](docs/runbooks/rds-and-secrets.md)を参照。
 
 ## 確認
 
@@ -121,7 +121,7 @@ Dockerfile               Web用・DB変更用イメージのビルド
 compose.yaml             DB・Keycloak、appプロファイルのWebとmigrate
 docker/postgres/         初回のDBユーザー・テスト用DB作成
 docker/keycloak/         ローカル認証用realm・クライアント・2ユーザー
-infra/dev/               AWSネットワーク・ECR・ECS・ログ・IAM、mockテスト
+infra/dev/               AWSネットワーク・ECR・ECS・ログ・IAM・RDS・Secret、mockテスト
 scripts/                 設定生成、Go/Terraform実行補助、検証、DBバックアップ・復元
 docs/                    設計判断・手順・検証記録
 TODO.md                  作業順と進捗
@@ -148,5 +148,7 @@ TODO.md                  作業順と進捗
 - [ステップ6Bの検証結果](docs/verification/07-terraform-network.md)
 - [ECR・ログ・ECS・IAMの構成と確認手順](docs/runbooks/ecs-foundation.md)
 - [ステップ6Cの検証結果](docs/verification/08-ecs-foundation.md)
+- [RDS・秘密情報・バックアップ/削除の設計と手順](docs/runbooks/rds-and-secrets.md)
+- [ステップ6Dの検証結果](docs/verification/09-rds-and-secrets.md)
 
 UIは不要なセカンダリラベルや説明を避け、レイアウトで伝える。

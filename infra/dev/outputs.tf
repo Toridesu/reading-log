@@ -57,3 +57,17 @@ output "ecs_role_arns" {
     }
   }
 }
+
+# 接続先とSecretの識別子だけを公開する。パスワード・接続URLの実値は出力しない。
+output "database" {
+  value = {
+    identifier              = aws_db_instance.app.identifier
+    address                 = aws_db_instance.app.address
+    port                    = aws_db_instance.app.port
+    name                    = aws_db_instance.app.db_name
+    application_user        = "readinglog"
+    master_secret_arn       = aws_db_instance.app.master_user_secret[0].secret_arn
+    database_url_secret_arn = aws_secretsmanager_secret.database_url.arn
+    log_group_name          = aws_cloudwatch_log_group.database.name
+  }
+}

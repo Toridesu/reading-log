@@ -20,7 +20,7 @@ Terraformは「作りたいAWS構成」を記述するツール。今回は `inf
 | `outputs.tf` | 後続の定義から参照するIDと、確認用のサブネットCIDR |
 | `tests/network.tftest.hcl` | AWSの代わりにmockを使い、設定同士のつながりを検査 |
 
-この手順はステップ6Bのネットワークを扱う。ステップ6CでECR・ログ・ECSクラスター・IAMも同じディレクトリへ追加した。[追加分の説明](ecs-foundation.md)を参照。ALB・ECSタスク/サービス・RDSは後続で接続する。
+この手順はステップ6Bのネットワークを扱う。ステップ6CでECR・ログ・ECSクラスター・IAMも同じディレクトリへ追加した。[追加分の説明](ecs-foundation.md)を参照。RDS・DB用Secretも[ステップ6D](rds-and-secrets.md)で定義済み。ALB・ECSタスク/サービスは後続で接続する。
 
 ## アドレスと通信経路
 
@@ -32,9 +32,9 @@ VPCは `10.20.0.0/16`、IPv4のみ。AZの初期値は `ap-northeast-1a` と `ap
 | アプリ用：ECS | `10.20.16.0/24` | `10.20.17.0/24` | `0.0.0.0/0 → AZ 1aのNAT`、東京S3はGateway Endpoint |
 | DB用：RDS | `10.20.32.0/24` | `10.20.33.0/24` | VPC内のlocalルートのみ |
 
-すべてのサブネットでパブリックIPの自動付与を無効にする。公開サブネットかどうかはIGWへの経路で決まり、自動付与の設定だけでは決まらない。将来のALBとNATには、それぞれのリソース設定で公開IPを持たせる。ECSでは別途 `assign_public_ip = false`、RDSでも公開アクセス無効を指定する。
+すべてのサブネットでパブリックIPの自動付与を無効にする。公開サブネットかどうかはIGWへの経路で決まり、自動付与の設定だけでは決まらない。将来のALBとNATには、それぞれのリソース設定で公開IPを持たせる。ECSでは別途 `assign_public_ip = false`、RDSは公開アクセス無効を指定済み。
 
-図のALB・ECS・RDSは配置予定。線は新規接続の向きを示す。
+図のRDSは定義済み、ALB・ECSタスクは配置予定。すべて実AWSには未作成。線は新規接続の向きを示す。
 
 ```mermaid
 flowchart LR
@@ -48,7 +48,7 @@ flowchart LR
       ECS[ECS / 追加予定]
     end
     subgraph DATA[DB用サブネット × 2AZ]
-      DB[RDS / 追加予定]
+      DB[RDS / 定義済み]
     end
     IGW[Internet Gateway]
     EP[S3 Gateway Endpoint]
@@ -109,7 +109,7 @@ AWSプロバイダーは6.73.0を固定し、`infra/dev/.terraform.lock.hcl` の
 3. `validate`：引数・型・参照などの整合性を確認。
 4. `test`：`mock_provider "aws"` でAWS APIを置き換えて検査。テスト内の `apply` / `plan` はmockに対する操作。
 
-現在はステップ6Cを含め、成功時は `Success! 12 passed, 0 failed.` と出る。失敗時は表示されたrun名・assertの説明を読み、`network.tf` のルートや `security-groups.tf` の参照先を確認する。今回調べるログはこのコマンドの標準出力・エラー出力。CloudWatch Logsの保存先はステップ6Cで定義済み。実ログの送信はタスクの実装・展開後に確認する。
+現在はステップ6Dを含め、成功時は `Success! 18 passed, 0 failed.` と出る。失敗時は表示されたrun名・assertの説明を読み、`network.tf` のルートや `security-groups.tf` の参照先を確認する。今回調べるログはこのコマンドの標準出力・エラー出力。CloudWatch Logsの保存先はステップ6Cで定義済み。実ログの送信はタスクの実装・展開後に確認する。
 
 mockはAWSの通信やIAMを再現しない。実際のAZの利用可否、権限、クォータ、ECRのpull、Cognitoのコード交換、SGでの通信可否はAWS展開時の確認事項。[Terraform：mockによるテスト](https://developer.hashicorp.com/terraform/language/tests/mocking)
 

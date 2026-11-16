@@ -5,8 +5,8 @@ variable "name_prefix" {
   nullable    = false
 
   validation {
-    condition     = can(regex("^[a-z][a-z0-9-]{2,23}$", var.name_prefix))
-    error_message = "name_prefixは英小文字で始まる3〜24文字の英小文字・数字・ハイフンにしてください。"
+    condition     = can(regex("^[a-z][a-z0-9-]{1,22}[a-z0-9]$", var.name_prefix)) && !strcontains(var.name_prefix, "--")
+    error_message = "name_prefixは英小文字で始まる3〜24文字の英小文字・数字・ハイフンにし、末尾・連続のハイフンを避けてください。"
   }
 }
 
@@ -33,5 +33,26 @@ variable "availability_zones" {
       for az in var.availability_zones : can(regex("^ap-northeast-1[a-z]$", az))
     ])
     error_message = "availability_zonesは東京の異なるAZを2つ指定してください。"
+  }
+}
+
+variable "db_deletion_protection" {
+  description = "通常は削除保護を有効にする。削除時はバックアップを確認し、falseへの変更を先に適用する。"
+  type        = bool
+  default     = true
+  nullable    = false
+}
+
+variable "db_final_snapshot_identifier" {
+  description = "省略時はname_prefix-final。再削除時は既存スナップショットと重ならない名前を指定する。"
+  type        = string
+  default     = null
+
+  validation {
+    condition = var.db_final_snapshot_identifier == null ? true : (
+      can(regex("^[a-z][a-z0-9-]{1,61}[a-z0-9]$", var.db_final_snapshot_identifier)) &&
+      !strcontains(var.db_final_snapshot_identifier, "--")
+    )
+    error_message = "最終スナップショット名は英小文字で始まる3〜63文字にし、末尾・連続のハイフンを避けてください。"
   }
 }
