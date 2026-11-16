@@ -40,7 +40,7 @@ Keycloakはローカル開発用のモードを使い、公開ポートをルー
 
 ### Terraform
 
-2026-11-16、公式Linux amd64版のSHA-256を固定値と照合して、Terraform 1.17.2をプロジェクト内へ配置した。システムのPATHは変更していない。AWSプロバイダー6.73.0と `.terraform.lock.hcl` も固定し、ネットワークの構文検証と8件のmockテストが成功。AWS CLI・AWS認証はまだ用意していない。
+2026-11-16、公式Linux amd64版のSHA-256を固定値と照合して、Terraform 1.17.2をプロジェクト内へ配置した。システムのPATHは変更していない。AWSプロバイダー6.73.0と `.terraform.lock.hcl` も固定し、ネットワークとECR・ログ・ECS/IAMの構文検証、計12件のmockテストが成功。AWS CLI・AWS認証はまだ用意していない。
 
 初回は `bash scripts/setup-terraform.sh`、通常の検査は `bash scripts/check-terraform.sh`。[構成・導入・検査の説明](terraform-network.md)を参照。配布物・キャッシュ・stateはGitへ入れない。
 

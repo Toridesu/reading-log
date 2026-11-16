@@ -1,5 +1,9 @@
 # AWS APIの代わりにmockを使う。applyはテスト内のシミュレーションで、実リソースを作らない。
-mock_provider "aws" {}
+mock_provider "aws" {
+  mock_data "aws_caller_identity" {
+    defaults = { account_id = "123456789012" }
+  }
+}
 
 # SG同士を取り違えた場合も検出できるよう、異なるIDを割り当てる。
 override_resource {

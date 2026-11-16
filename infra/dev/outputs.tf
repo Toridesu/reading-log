@@ -26,3 +26,34 @@ output "subnet_cidrs" {
     db     = [for subnet in aws_subnet.db : subnet.cidr_block]
   }
 }
+
+# 後続のタスク定義・デプロイ手順で使う。秘密情報は出力しない。
+output "ecr_repositories" {
+  value = {
+    for workload, repository in aws_ecr_repository.app : workload => {
+      name = repository.name
+      arn  = repository.arn
+      url  = repository.repository_url
+    }
+  }
+}
+
+output "ecs_cluster" {
+  value = {
+    name = aws_ecs_cluster.app.name
+    arn  = aws_ecs_cluster.app.arn
+  }
+}
+
+output "log_group_names" {
+  value = { for workload, group in aws_cloudwatch_log_group.app : workload => group.name }
+}
+
+output "ecs_role_arns" {
+  value = {
+    for workload in local.workloads : workload => {
+      execution = aws_iam_role.execution[workload].arn
+      task      = aws_iam_role.task[workload].arn
+    }
+  }
+}

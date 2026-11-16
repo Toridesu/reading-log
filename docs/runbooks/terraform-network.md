@@ -20,7 +20,7 @@ Terraformは「作りたいAWS構成」を記述するツール。今回は `inf
 | `outputs.tf` | 後続の定義から参照するIDと、確認用のサブネットCIDR |
 | `tests/network.tftest.hcl` | AWSの代わりにmockを使い、設定同士のつながりを検査 |
 
-ALB・ECS・RDSの本体は次の作業で追加する。今回はその配置先とSGまで。
+この手順はステップ6Bのネットワークを扱う。ステップ6CでECR・ログ・ECSクラスター・IAMも同じディレクトリへ追加した。[追加分の説明](ecs-foundation.md)を参照。ALB・ECSタスク/サービス・RDSは後続で接続する。
 
 ## アドレスと通信経路
 
@@ -109,7 +109,7 @@ AWSプロバイダーは6.73.0を固定し、`infra/dev/.terraform.lock.hcl` の
 3. `validate`：引数・型・参照などの整合性を確認。
 4. `test`：`mock_provider "aws"` でAWS APIを置き換えて検査。テスト内の `apply` / `plan` はmockに対する操作。
 
-成功時は `Success! 8 passed, 0 failed.` と出る。失敗時は表示されたrun名・assertの説明を読み、`network.tf` のルートや `security-groups.tf` の参照先を確認する。今回調べるログはこのコマンドの標準出力・エラー出力。CloudWatch Logsは後で追加する。
+現在はステップ6Cを含め、成功時は `Success! 12 passed, 0 failed.` と出る。失敗時は表示されたrun名・assertの説明を読み、`network.tf` のルートや `security-groups.tf` の参照先を確認する。今回調べるログはこのコマンドの標準出力・エラー出力。CloudWatch Logsの保存先はステップ6Cで定義済み。実ログの送信はタスクの実装・展開後に確認する。
 
 mockはAWSの通信やIAMを再現しない。実際のAZの利用可否、権限、クォータ、ECRのpull、Cognitoのコード交換、SGでの通信可否はAWS展開時の確認事項。[Terraform：mockによるテスト](https://developer.hashicorp.com/terraform/language/tests/mocking)
 
