@@ -114,17 +114,17 @@ ECRのイメージレイヤーを取得する東京S3への通信は、AWS管理
 | --- | --- |
 | ALB → アプリ | アプリSGの8000番をALBのSGからのみ許可 |
 | アプリ → DB | DBの5432番をアプリSGからのみ許可。接続時はTLSと証明書検証 |
-| ECS実行ロール | Web/migrate別に対象ECRのpullと対象ログストリームへの出力を定義済み。ECR認証APIだけResource全体が必要。アプリDB用Secretの取得も定義済み。管理者Secretは許可せず、OIDC用は後続で追加 |
-| アプリのタスクロール | 初期はAWS API権限を付けない。機能追加時に必要な権限だけ追加 |
+| ECS実行ロール | Web/migrate/bootstrap別に対象ECRのpullと対象ログストリームへの出力を定義済み。ECR認証APIだけResource全体が必要。アプリDB用Secretの取得も定義済み。管理者Secretは許可せず、OIDC用は後続で追加 |
+| アプリのタスクロール | Web/migrateはAWS API権限なし。bootstrapだけ管理者Secretの取得とアプリSecretの取得/保存を許可 |
 | DBユーザー | 初期はアプリ専用ユーザーで実行・マイグレーションを行い、対象DB・スキーマに権限を限定する。アプリでRDS管理者は使用しない。実行用と変更用の分離は拡張時に学ぶ |
 | 秘密情報 | DB接続情報・OIDCクライアントシークレット等はAWSではSecrets Managerから起動時に注入。値をコード、イメージ、ログへ入れない。更新後のタスク再起動も手順化 |
 | Terraform state | 秘密情報を含み得るものとして扱う。Secretの値の投入はリソース定義から分離し、stateへの保存を個別に確認 |
 | アプリログ | JSONを標準出力。request_id、イベント、ユーザーID、HTTPステータス、処理時間を記録。認証情報・セッション・メモ本文は記録しない |
-| 保存期間 | Web/migrateのCloudWatch Logsを分けて14日保持を定義済み。調査要件に応じて変更 |
+| 保存期間 | Web/migrate/bootstrapのCloudWatch Logsを分けて14日保持を定義済み。調査要件に応じて変更 |
 
-ECRはWeb/migrate別のプライベートリポジトリで、タグ上書きを禁止し、自動削除はまだ行わない。ECSクラスターは通常のFargateを使う。実行ロールとタスクロールを各用途で分け、アカウント・東京を信頼条件へ設定する。[具体的な設定とトレードオフ](runbooks/ecs-foundation.md)を参照。
+ECRはWeb/migrate/bootstrap別のプライベートリポジトリで、タグ上書きを禁止し、自動削除はまだ行わない。ECSクラスターは通常のFargateを使う。実行ロールとタスクロールを各用途で分け、アカウント・東京を信頼条件へ設定する。[具体的な設定とトレードオフ](runbooks/ecs-foundation.md)を参照。
 
-RDSは18.6・暗号化gp3 20GiB（自動拡張上限100GiB）・TLS必須・7日バックアップを定義済み。管理者パスワードはRDSが管理し、アプリ用Secretとは分離する。削除保護と最終スナップショットを有効にする。クライアントTLS・公式RDS CA同梱とローカルのTLS拒否テストは完了。DB初期化とSecret値投入は後続。[設定・復元/削除の手順](runbooks/rds-and-secrets.md)を参照。
+RDSは18.6・暗号化gp3 20GiB（自動拡張上限100GiB）・TLS必須・7日バックアップを定義済み。管理者パスワードはRDSが管理し、アプリ用Secretとは分離する。削除保護と最終スナップショットを有効にする。クライアントTLS・公式RDS CA同梱とローカルのTLS拒否テストは完了。DB初期化とSecret値投入のコード・専用IAMもローカル検証済み。AWS投入とECSタスクへの接続は後続。[設定・復元/削除の手順](runbooks/rds-and-secrets.md)を参照。
 
 公開前にホスト・リダイレクトURI制限、Secure/HttpOnly/SameSite Cookie、CSRF、セッション期限、認証サービスのログイン試行制限を確認する。Goアプリ側のログイン開始・コールバックにも流量制限とエラー処理を設ける。認証コードやトークンが含まれるURLをログへ丸ごと保存しない。アプリの業務上の認可はネットワーク制限やIAMとは別に検証する。
 

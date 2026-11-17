@@ -1,12 +1,12 @@
 # RDSとSecrets Manager：DB・接続情報・バックアップ
 
-更新日：2026-11-16（日本時間）
+更新日：2026-11-17（日本時間）
 
 今回決めること：プライベートRDSの設定、管理者とアプリの認証情報の分離、バックアップと削除時の扱い。
 採用理由：DBを公開せず、アプリへ管理者権限を渡さずに、再構築と復元を学べる構成にする。
 完了条件：Terraform定義の構文・mockテストが通り、接続準備と復元・削除の手順を説明できる。
 
-今回はAWS定義の追加まで。実AWSへのplan/apply、RDS起動、Secretの値の投入、復元演習は行っていない。クライアントTLS・CA同梱は[ステップ6E](database-tls.md)で実装/ローカル検証済み。アプリユーザー初期化とSecret値投入は後続。
+今回はAWS定義の追加まで。実AWSへのplan/apply、RDS起動、Secretの値の投入、復元演習は行っていない。クライアントTLS・CA同梱は[ステップ6E](database-tls.md)で実装/ローカル検証済み。アプリユーザー初期化とSecret値投入のコードは[ステップ6F](database-bootstrap.md)でローカル検証済み。実AWSへの投入は未実施。
 
 ## 作ったもの
 
@@ -18,11 +18,11 @@
 | `infra/dev/outputs.tf` | DB接続先・SecretのARN・ログ名。パスワードの出力なし |
 | `infra/dev/tests/database.tftest.hcl` | 配置・TLS・バックアップ・権限・削除設定の6件のmockテスト |
 
-将来の実行時の関係。タスク・DBユーザー初期化・Secret値の投入は未実装。
+将来の実行時の関係。初期化コードは実装済みで、ECSタスク定義との接続は後続。
 
 ```mermaid
 flowchart LR
-  ADMIN[初期化処理 / 後で追加] -->|初期化時だけ取得| MASTER[管理者Secret / RDSが管理]
+  ADMIN[bootstrap単発タスク / コード実装済み] -->|初期化時だけ取得| MASTER[管理者Secret / RDSが管理]
   MASTER -.->|管理対象| RDS[(RDS / readinglog)]
   RDS --> LOG[PostgreSQLログ / 14日]
   EXEC[Fargate / Web・migrate実行ロール] -->|GetSecretValue| APPSECRET[アプリ用Secret / 接続URL]
@@ -61,21 +61,21 @@ DBログは `/aws/rds/instance/reading-log-dev-db/postgresql` へ送り、14日�
 | 対象 | 管理方法 | 用途 |
 | --- | --- | --- |
 | `readinglog_admin` | RDSがパスワードを生成し、管理対象のSecretへ保存 | DBユーザー初期化・管理作業だけ |
-| `readinglog` | 初期化時に作る予定。接続URLを `reading-log-dev/database-url` へ保存 | Webとマイグレーション |
+| `readinglog` | 初期化コマンドで作る。接続URLを `reading-log-dev/database-url` へ保存 | Webとマイグレーション |
 
 RDSには `manage_master_user_password = true` を指定し、Terraformの `password` や `random_password` は使わない。管理者の値はTerraformで取得せず、ARNだけ参照する。RDSが生成するSecretはRDSの管理対象で、DBを削除するとこのSecretも削除される。[AWS：RDSによるパスワード管理](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/rds-secrets-manager.html)
 
 アプリ用Secretは保存先だけをTerraformで作る。`aws_secretsmanager_secret_version` やSecret値を読み出すdata sourceは作らない。実値をTerraformへ渡さないことで、この構成では接続パスワードをstateへ入れない。state自体は引き続き保護対象として扱う。
 
-初期構成ではWebとmigrateが同じ専用DBユーザーを使う。スーパーユーザー・ロール作成・DB作成は許可せず、対象スキーマを所有させる方針。WebからもDDLができるトレードオフが残るため、実行用と変更用のDB権限分離は後の拡張にする。
+初期構成ではWebとmigrateが同じ専用DBユーザーを使う。スーパーユーザー・ロール作成・DB作成は許可せず、publicスキーマにUSAGE/CREATEを付与し、作成したテーブルを所有させる。DBとスキーマの所有権は管理者側に残す。WebからもDDLができるトレードオフが残るため、実行用と変更用のDB権限分離は後の拡張にする。
 
 両方のECS実行ロールへ、アプリ用SecretのARNに限定した `secretsmanager:GetSecretValue` だけを追加する。管理者Secretの取得・Secret更新・一覧取得は許可に含めない。Go用タスクロールへのAPI許可も追加しない。初期はSecrets Managerの既定のAWS管理キーを使い、カスタマー管理KMSキーを使う場合の権限追加は別途設計する。
 
-## 次に実装する接続準備
+## 接続準備の進捗
 
 1. RDSの公式CAバンドルを検証して、Web・migrateイメージへ含める（ステップ6Eで完了）。
-2. プライベート側で実行する初期化処理を用意する。管理者Secretを読む権限はこの処理だけへ与え、アプリユーザーと対象スキーマの権限を作る。
-3. URLのユーザー名・パスワードを適切にエンコードし、アプリ用Secretへ接続URLの文字列全体を保存する。値をコマンド引数・ログ・Gitへ出さない。
+2. プライベート側で実行する初期化コマンドと専用IAMを用意済み。管理者Secretを読む権限はこの処理だけへ与える。ECSタスク定義への接続は後続。
+3. URLをエンコードしてアプリ用Secretへ保存するコードを実装済み。値をコマンド引数・ログ・Gitへ出さない。初期化成功後に4・5へ進める。
 4. ECSタスク定義の `secrets` で、このSecretの全文を `DATABASE_URL` に注入する。
 5. 専用ユーザーでマイグレーション、Webの起動、TLSと認可を確認する。
 
@@ -95,7 +95,7 @@ Secretの更新だけでは、すでに起動したタスクの環境変数は�
 bash scripts/check-terraform.sh
 ```
 
-期待結果は `Success! 18 passed, 0 failed.`。実AWSの作成や認証は行わず、管理者SecretのARNも架空値を使う。検査は設定の対応関係を見るもので、RDSのTLS・実IAMの拒否・復元成功を証明するものではない。[検証結果](../verification/09-rds-and-secrets.md)
+期待結果は `Success! 19 passed, 0 failed.`。実AWSの作成や認証は行わず、管理者SecretのARNも架空値を使う。検査は設定の対応関係を見るもので、RDSのTLS・実IAMの拒否・復元成功を証明するものではない。[検証結果](../verification/09-rds-and-secrets.md)
 
 | 症状・確認事項 | 実展開後に見る場所 |
 | --- | --- |
@@ -116,7 +116,7 @@ bash scripts/check-terraform.sh
 
 スナップショットもPITRも既存DBへの上書きではなく新しいDBへの復元。[AWS：スナップショット復元](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_RestoreFromSnapshot.html)、[AWS：PITR](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_PIT.html)
 
-復元用リソースをTerraformの本体設定の書き換えで代用しない。実施時は検証用の管理単位を用意し、残す場合のimportと削除対象も記録する。復元演習・初期化処理は現在未実装/未実施。
+復元用リソースをTerraformの本体設定の書き換えで代用しない。実施時は検証用の管理単位を用意し、残す場合のimportと削除対象も記録する。復元演習は未実施。初期化コードは実装済みだが、復元先の接続情報変更は別の作業として扱う。
 
 ## 再構築と削除
 

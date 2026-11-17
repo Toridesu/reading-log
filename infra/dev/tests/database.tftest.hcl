@@ -138,3 +138,21 @@ run "reject_invalid_database_prefix" {
   }
   expect_failures = [var.name_prefix]
 }
+
+run "bootstrap_secret_permissions" {
+  command = apply
+  assert {
+    condition = (
+      aws_iam_role_policy.bootstrap_secrets.role == aws_iam_role.task["bootstrap"].name &&
+      length(jsondecode(aws_iam_role_policy.bootstrap_secrets.policy).Statement) == 2 &&
+      jsondecode(aws_iam_role_policy.bootstrap_secrets.policy).Statement[0].Effect == "Allow" &&
+      toset(jsondecode(aws_iam_role_policy.bootstrap_secrets.policy).Statement[0].Action) == toset(["secretsmanager:GetSecretValue"]) &&
+      jsondecode(aws_iam_role_policy.bootstrap_secrets.policy).Statement[0].Resource == aws_db_instance.app.master_user_secret[0].secret_arn &&
+      jsondecode(aws_iam_role_policy.bootstrap_secrets.policy).Statement[1].Effect == "Allow" &&
+      toset(jsondecode(aws_iam_role_policy.bootstrap_secrets.policy).Statement[1].Action) == toset(["secretsmanager:GetSecretValue", "secretsmanager:PutSecretValue"]) &&
+      jsondecode(aws_iam_role_policy.bootstrap_secrets.policy).Statement[1].Resource == aws_secretsmanager_secret.database_url.arn &&
+      !contains(keys(aws_iam_role_policy.database_secret), "bootstrap")
+    )
+    error_message = "初期化のタスクロールだけに管理者Secretの読み取りとアプリSecretの読み書きを許可してください。"
+  }
+}

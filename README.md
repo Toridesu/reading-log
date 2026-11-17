@@ -4,7 +4,7 @@ AWSの設計・構築・運用、CI/CD、脅威検知・対応を学ぶための
 
 リポジトリ：[Toridesu/reading-log](https://github.com/Toridesu/reading-log)。進捗は [TODO.md](TODO.md) で管理する。
 
-現在はステップ5まで完了。Keycloak経由のログイン・ログアウトと、自分の読書タスクの作成・一覧・編集・削除が動く。DB停止からの復旧と、バックアップを別DBへ戻して操作する検証も完了した。ステップ6はコンテナ化、Terraformのネットワーク・ECR・ログ・ECSクラスター・IAM・RDS・DB用Secretの定義とmockテストまで完了。Go側のTLS検証とRDS CAの同梱も完了。次はDBユーザー初期化とSecret値の投入処理を実装する。当面はAWSリソースを作成しない。
+現在はステップ5まで完了。Keycloak経由のログイン・ログアウトと、自分の読書タスクの作成・一覧・編集・削除が動く。DB停止からの復旧と、バックアップを別DBへ戻して操作する検証も完了した。ステップ6はコンテナ化、Terraformのネットワーク・ECR・ログ・ECSクラスター・IAM・RDS・DB用Secretの定義とmockテストまで完了。Go側のTLS検証とRDS CAの同梱も完了。DB初期化・Secret値の投入処理もローカルで検証済み。次はCognitoとOIDC用Secretを定義する。当面はAWSリソースを作成しない。
 
 ## 起動
 
@@ -70,6 +70,9 @@ python3 scripts/verify-login.py
 
 # アプリの起動は不要：専用DBでTLSを検証して片付ける
 python3 scripts/verify-database-tls.py
+
+# 初期化・再実行・権限拒否を、使い捨てDBと代替APIで検証
+python3 scripts/verify-database-tls.py --bootstrap
 ```
 
 `/healthz` はアプリの稼働確認。`/readyz` はDBへ接続できれば200、接続できなければ503を返す。Keycloakの状態は `docker compose ps` で確認する。テーブルが揃っているかはマイグレーションの `status` で確認する。
@@ -116,12 +119,13 @@ cmd/web/                 アプリの起動・設定・正常終了
 cmd/migrate/             テーブル変更の適用・状態確認
 cmd/healthcheck/         コンテナ内でGoの稼働を確認するコマンド
 internal/web/            HTTPルート、ログ、画面、テスト
+internal/bootstrap/      AWS向けDB初期化・Secret取得/保存・再実行の検証
 internal/database/       DB接続とマイグレーション、DBテスト
 internal/auth/           OIDC、DBセッション、Cookie、認証テスト
 internal/books/          読書タスクの項目、入力検証、所有者を条件にしたSQL
 migrations/              テーブル定義のSQL
 certs/                   東京RDSの公開CA・固定チェックサム
-Dockerfile               Web用・DB変更用イメージのビルド
+Dockerfile               Web・DB変更・初期化用イメージのビルド
 .dockerignore            ビルドへ渡すファイルの制限
 compose.yaml             DB・Keycloak、appプロファイルのWebとmigrate
 docker/postgres/         初回のDBユーザー・テスト用DB作成
@@ -157,5 +161,8 @@ TODO.md                  作業順と進捗
 - [ステップ6Dの検証結果](docs/verification/09-rds-and-secrets.md)
 - [DB接続のTLS・CA・拒否テストの手順](docs/runbooks/database-tls.md)
 - [ステップ6Eの検証結果](docs/verification/10-database-tls.md)
+- [DB初期化の設計判断](docs/adr/0004-database-bootstrap.md)
+- [DB初期化・再実行・障害時の手順](docs/runbooks/database-bootstrap.md)
+- [ステップ6Fの検証結果](docs/verification/11-database-bootstrap.md)
 
 UIは不要なセカンダリラベルや説明を避け、レイアウトで伝える。

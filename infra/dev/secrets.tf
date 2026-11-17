@@ -8,7 +8,7 @@ resource "aws_secretsmanager_secret" "database_url" {
 
 # 起動時にFargateが取得する。Webとmigrateは同じアプリDBユーザーを使う初期設計。
 resource "aws_iam_role_policy" "database_secret" {
-  for_each = local.workloads
+  for_each = local.application_workloads
 
   name = "read-application-database-secret"
   role = aws_iam_role.execution[each.key].name

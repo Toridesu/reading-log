@@ -14,6 +14,7 @@ ARG TARGETARCH
 RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
     GOOS=$TARGETOS GOARCH=$TARGETARCH go build -mod=readonly -trimpath -buildvcs=false -ldflags="-s -w" -o /out/web ./cmd/web && \
     GOOS=$TARGETOS GOARCH=$TARGETARCH go build -mod=readonly -trimpath -buildvcs=false -ldflags="-s -w" -o /out/migrate ./cmd/migrate && \
+    GOOS=$TARGETOS GOARCH=$TARGETARCH go build -mod=readonly -trimpath -buildvcs=false -ldflags="-s -w" -o /out/bootstrap ./cmd/bootstrap && \
     GOOS=$TARGETOS GOARCH=$TARGETARCH go build -mod=readonly -trimpath -buildvcs=false -ldflags="-s -w" -o /out/healthcheck ./cmd/healthcheck
 
 FROM scratch AS runtime
@@ -27,6 +28,11 @@ FROM runtime AS migrate
 COPY --from=build /out/migrate /app/migrate
 ENTRYPOINT ["/app/migrate"]
 CMD ["status"]
+
+# 初期化だけが管理者Secretを読む。Web/migrateにはこのコマンドを入れない。
+FROM runtime AS bootstrap
+COPY --from=build /out/bootstrap /app/bootstrap
+ENTRYPOINT ["/app/bootstrap"]
 
 FROM runtime AS web
 COPY --from=build /out/web /app/web

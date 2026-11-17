@@ -61,7 +61,7 @@ resource "aws_iam_role_policy" "execution" {
   })
 }
 
-# GoからAWS APIを呼ぶときのロール。今はDBとOIDCの通信だけなので許可ポリシーを付けない。
+# GoからAWS APIを呼ぶときのロール。Web/migrateは許可なし。初期化だけにSecret操作を別途付ける。
 resource "aws_iam_role" "task" {
   for_each = local.workloads
 

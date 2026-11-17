@@ -32,11 +32,20 @@ override_resource {
   values = { arn = "arn:aws:logs:ap-northeast-1:123456789012:log-group:/ecs/reading-log-dev/migrate" }
 }
 
+override_resource {
+  target = aws_ecr_repository.app["bootstrap"]
+  values = { arn = "arn:aws:ecr:ap-northeast-1:123456789012:repository/reading-log-dev/bootstrap" }
+}
+override_resource {
+  target = aws_cloudwatch_log_group.app["bootstrap"]
+  values = { arn = "arn:aws:logs:ap-northeast-1:123456789012:log-group:/ecs/reading-log-dev/bootstrap" }
+}
+
 run "artifact_and_log_storage" {
   command = apply
 
   assert {
-    condition = toset(keys(aws_ecr_repository.app)) == toset(["web", "migrate"]) && alltrue([
+    condition = toset(keys(aws_ecr_repository.app)) == toset(["web", "migrate", "bootstrap"]) && alltrue([
       for workload, repository in aws_ecr_repository.app :
       repository.name == "${var.name_prefix}/${workload}" &&
       repository.image_tag_mutability == "IMMUTABLE" && !repository.force_delete &&
@@ -46,7 +55,7 @@ run "artifact_and_log_storage" {
     error_message = "Webとmigrateのイメージを分け、タグ上書き・強制削除を無効にし、暗号化・push時検査を設定してください。"
   }
   assert {
-    condition = toset(keys(aws_cloudwatch_log_group.app)) == toset(["web", "migrate"]) && alltrue([
+    condition = toset(keys(aws_cloudwatch_log_group.app)) == toset(["web", "migrate", "bootstrap"]) && alltrue([
       for workload, group in aws_cloudwatch_log_group.app :
       group.name == "/ecs/${var.name_prefix}/${workload}" && group.retention_in_days == 14 &&
       group.log_group_class == "STANDARD" && !group.skip_destroy && !group.deletion_protection_enabled
@@ -66,7 +75,7 @@ run "execution_permissions" {
   command = apply
 
   assert {
-    condition = toset(keys(aws_iam_role_policy.execution)) == toset(["web", "migrate"]) && alltrue([
+    condition = toset(keys(aws_iam_role_policy.execution)) == toset(["web", "migrate", "bootstrap"]) && alltrue([
       for workload, policy in aws_iam_role_policy.execution :
       policy.role == aws_iam_role.execution[workload].name &&
       policy.role != aws_iam_role.task[workload].name &&
@@ -106,9 +115,9 @@ run "ecs_role_trust" {
   command = apply
 
   assert {
-    condition = (length(aws_iam_role.execution) == 2 && length(aws_iam_role.task) == 2 &&
-    length(toset(concat([for role in aws_iam_role.execution : role.name], [for role in aws_iam_role.task : role.name]))) == 4)
-    error_message = "Web/migrateの実行ロール・タスクロールを4つに分離してください。"
+    condition = (length(aws_iam_role.execution) == 3 && length(aws_iam_role.task) == 3 &&
+    length(toset(concat([for role in aws_iam_role.execution : role.name], [for role in aws_iam_role.task : role.name]))) == 6)
+    error_message = "Web/migrate/bootstrapの実行ロール・タスクロールを6つに分離してください。"
   }
   assert {
     condition = alltrue([

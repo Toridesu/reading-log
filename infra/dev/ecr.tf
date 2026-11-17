@@ -1,6 +1,7 @@
-# WebとDB変更用のイメージを別々に保管する。同じタグの上書きと、中身を含めた強制削除を防ぐ。
+# Web・DB変更・初期化用のイメージを別々に保管する。同じタグの上書きと、中身を含めた強制削除を防ぐ。
 locals {
-  workloads = toset(["web", "migrate"])
+  workloads             = toset(["web", "migrate", "bootstrap"])
+  application_workloads = toset(["web", "migrate"])
 }
 
 resource "aws_ecr_repository" "app" {

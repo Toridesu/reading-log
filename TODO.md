@@ -95,7 +95,7 @@ mainブランチでローカルGit管理を開始。SDK・キャッシュ・秘�
 - [x] ECSクラスターと用途別の実行/タスクロールを定義する（イメージ取得・ログ送信まで）
 - [x] RDS・アプリDB用Secrets Managerと、そのSecretだけの取得権限を定義する（構文・mockテスト済み）
 - [x] RDS向けTLS・CA配置と、ローカルの実DBでのTLS拒否テストを用意する
-- [ ] 専用DBユーザー初期化とSecret値の投入処理を用意する
+- [x] 専用DBユーザー初期化とSecret値の投入処理を用意する（ローカルDB・代替APIで検証。AWS投入は未実施）
 - [ ] CognitoとOIDC用Secret・取得権限を定義する
 - [ ] ALB・ECS Fargateのタスク定義/サービスを接続する
 - [ ] stateのS3保存・ロックと、アプリ環境からの分離を用意する
@@ -164,3 +164,5 @@ mainブランチでローカルGit管理を開始。SDK・キャッシュ・秘�
 - 2026-11-16：ステップ6C完了。Web/migrateのECR・ログ・用途別IAMとFargate用クラスターを定義。対象ARNに限定したpull/ログ送信、信頼条件、保存設定を検査し、既存分を含む12件のmockテストに成功。AWSリソースは未作成。次はRDSとSecrets Managerの定義。[検証結果](docs/verification/08-ecs-foundation.md)
 - 2026-11-16：ステップ6D完了。非公開RDS PostgreSQL 18.6、暗号化・TLS必須・7日バックアップ・削除保護・最終スナップショットとDBログを定義。管理者Secretとアプリ接続情報を分離し、取得権限を限定。既存分を含む18件のmockテストに成功。実AWS・値の投入・復元は未実施。次はDB初期化とクライアントTLS。[検証結果](docs/verification/09-rds-and-secrets.md)
 - 2026-11-16：ステップ6E完了。GoのDB接続は証明書/ホスト名検証を既定で必須とし、ローカルだけ明示的に平文を許可。東京RDSの公式公開CAを検証・固定し、Web/migrateへ同梱。使い捨てPostgreSQLでTLS1.3接続と5種類の拒否、既存DBの統合テスト、コンテナビルド・起動を確認。次はDBユーザー初期化とSecret値投入。[検証結果](docs/verification/10-database-tls.md)
+
+- 2026-11-17：ステップ6F完了。Goの初期化専用コマンド・イメージ・ECR/ログ/IAMを追加。Secret保存→DB初期化の順序と同じ値での再実行を実装。使い捨てTLS DBで12ケース、Terraformの19件のmockテストが成功。AWS APIは代替、実RDSへの投入は未実施。次はCognitoとOIDC用Secret。[検証結果](docs/verification/11-database-bootstrap.md)
